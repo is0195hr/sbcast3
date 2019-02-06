@@ -1,7 +1,7 @@
 #include "sbcast.h"
 #include <random.h>
 #include <time.h>
-
+//test
 #define CODE_NUM 3
 
 #define BUF 900
@@ -502,6 +502,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
             }
         }
     }
+
 
     //fprintf(mytraceFile,"TOPO node:%d %d topo:%f\n",my_addr(),mystatus[my_addr()],goukei_topo);
 	//受信(転送)動作
