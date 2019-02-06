@@ -2,6 +2,7 @@
 #include <random.h>
 #include <time.h>
 //test
+//room
 #define CODE_NUM 3
 
 #define BUF 900
