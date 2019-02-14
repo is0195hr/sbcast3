@@ -1,7 +1,7 @@
 #include "sbcast.h"
 #include <random.h>
 #include <time.h>
-//test
+
 #define CODE_NUM 3
 
 #define BUF 900
