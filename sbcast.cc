@@ -390,75 +390,80 @@ void SBAgent::recv(Packet *p,Handler *h) {
     //fprintf(mytraceFile,"neigNUM\tnode:%d\tnei:%d\n",my_addr(),neighbor_count);
     //隣接ノードの状況把握
     //自ノードはノード1つずつ履歴を確認していく
-    //破棄予定パケットも計測
-            
     int fl_count = 0, nc_count = 0;
-    for (int neinode = 0; neinode < 5/*NODE_NUM*/; neinode++) {
-        fprintf(stdout,"-------------calcing %d node\n",neinode);
-        //区切りエントリに基づいて、現在のエントリから遡り、ヒット数を計測
-        hitcount[my_addr()] = 0;
-        for (int i = sendercount[my_addr()]; i >= topocount[my_addr()]; i--) {
-            if (sender[my_addr()][i] == neinode) {
-                hitcount[my_addr()]++;
-                //fprintf(stdout,"time:%f\n",recvtime[my_addr()][i]);
-            }
-        }
-        float topo_all, topo_latest;
-        topo_all = (float) hitcount[my_addr()] / (float) bunbo;
-        fprintf(stdout, "topo_all:%f (%d/%d)\n", topo_all, hitcount[my_addr()], bunbo);
-        fprintf(stdout, "hit:%d\n", hitcount[my_addr()]);
-        if(hitcount[my_addr()]==0){
-            fprintf(stdout,"node%dは自ノード(%d)または非隣接ノードのため打ち切り\n",neinode,my_addr());
-            break;
-        }
-        //ここまでall
-
-        //半分時間補正
-        //allエントリ数をkosuuへ
-        int kosuu;
-        kosuu = sendercount[my_addr()] - topocount[my_addr()] + 1;
-        //allの半分のうち、後半の最初のエントリをhalf_countへ
-        int half_count;
-        half_count = sendercount[my_addr()] - kosuu / 2 + 1;
-
-        fprintf(stdout, "%d-%d+1=hanbun:%d\n", sendercount[my_addr()], topocount[my_addr()], kosuu);
-        fprintf(stdout, "half_count:%d\n", half_count);
-        //半分のヒット数を計測
-        int half_hit = 0;
-        for (int i = sendercount[my_addr()]; i >= half_count; i--) {
-            if (sender[my_addr()][i] == neinode) {
-                half_hit++;
-            }
-        }
-        float half_topo;
-        half_topo = (float) half_hit / (float) ((kosuu / 2) + 1);
-        //全体のエントリ数が1のときの例外
-        if (kosuu == 1) {
-            half_topo = 1;
-            fprintf(stdout, "全体のエントリ数が1なのでhalf_topoを1に変更\n");
-        }
-        fprintf(stdout, "半分 %f,%d,%d\n", half_topo, half_hit, ((kosuu / 2) + 1));
-
-        //全体+half
-        float goukei_topo_temp;
-        goukei_topo_temp = (topo_all + half_topo) / 2;
-
-        fprintf(stdout, "合算topo:%f\n", goukei_topo_temp);
-
-        if (goukei_topo <= SWITCH_TH) {
-            fl_count++;
-        } else if (goukei_topo >= SWITCH_TH) {
-            nc_count++;
-        } else {
-            fprintf(mytraceFile, "err \n");
-            return;
-        }
-       // fprintf(mytraceFile, "node:%d neighbor node %d fl:%d, nc:%d\n",my_addr(),neinode, fl_count, nc_count);
-
-
+    //一度受信したパケットは調査しない
+    int aa=0;
+    if (recvlog[my_addr()][ph->pktnum_] == 1) {
+        aa = 1;
     }
-    fprintf(mytraceFile, "*node:%d time:%f neighbor node  fl:%d, nc:%d\n",my_addr(),Scheduler::instance().clock(), fl_count, nc_count);
+    if(aa==0) {
+        for (int neinode = 0; neinode < 5/*NODE_NUM*/; neinode++) {
+            fprintf(stdout, "-------------calcing %d node\n", neinode);
+            //区切りエントリに基づいて、現在のエントリから遡り、ヒット数を計測
+            hitcount[my_addr()] = 0;
+            for (int i = sendercount[my_addr()]; i >= topocount[my_addr()]; i--) {
+                if (sender[my_addr()][i] == neinode) {
+                    hitcount[my_addr()]++;
+                    //fprintf(stdout,"time:%f\n",recvtime[my_addr()][i]);
+                }
+            }
+            float topo_all, topo_latest;
+            topo_all = (float) hitcount[my_addr()] / (float) bunbo;
+            fprintf(stdout, "topo_all:%f (%d/%d)\n", topo_all, hitcount[my_addr()], bunbo);
+            fprintf(stdout, "hit:%d\n", hitcount[my_addr()]);
+            if (hitcount[my_addr()] == 0) {
+                fprintf(stdout, "node%dは自ノード(%d)または非隣接ノードのため打ち切り\n", neinode, my_addr());
+                break;
+            }
+            //ここまでall
 
+            //半分時間補正
+            //allエントリ数をkosuuへ
+            int kosuu;
+            kosuu = sendercount[my_addr()] - topocount[my_addr()] + 1;
+            //allの半分のうち、後半の最初のエントリをhalf_countへ
+            int half_count;
+            half_count = sendercount[my_addr()] - kosuu / 2 + 1;
+
+            fprintf(stdout, "%d-%d+1=hanbun:%d\n", sendercount[my_addr()], topocount[my_addr()], kosuu);
+            fprintf(stdout, "half_count:%d\n", half_count);
+            //半分のヒット数を計測
+            int half_hit = 0;
+            for (int i = sendercount[my_addr()]; i >= half_count; i--) {
+                if (sender[my_addr()][i] == neinode) {
+                    half_hit++;
+                }
+            }
+            float half_topo;
+            half_topo = (float) half_hit / (float) ((kosuu / 2) + 1);
+            //全体のエントリ数が1のときの例外
+            if (kosuu == 1) {
+                half_topo = 1;
+                fprintf(stdout, "全体のエントリ数が1なのでhalf_topoを1に変更\n");
+            }
+            fprintf(stdout, "半分 %f,%d,%d\n", half_topo, half_hit, ((kosuu / 2) + 1));
+
+            //全体+half
+            float goukei_topo_temp;
+            goukei_topo_temp = (topo_all + half_topo) / 2;
+
+            fprintf(stdout, "合算topo:%f\n", goukei_topo_temp);
+
+            if (goukei_topo <= SWITCH_TH) {
+                fl_count++;
+            } else if (goukei_topo >= SWITCH_TH) {
+                nc_count++;
+            } else {
+                fprintf(mytraceFile, "err \n");
+                return;
+            }
+            // fprintf(mytraceFile, "node:%d neighbor node %d fl:%d, nc:%d\n",my_addr(),neinode, fl_count, nc_count);
+
+
+        }
+        fprintf(mytraceFile, "*node:%d time:%f neighbor node  fl:%d, nc:%d\n", my_addr(), Scheduler::instance().clock(),
+                fl_count, nc_count);
+    }
     sendercount[my_addr()]++;
     //ステータス決定
     if (TRANSTH_TYPE == 0){//旧方式
