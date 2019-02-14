@@ -391,6 +391,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
     //隣接ノードの状況把握
     //自ノードはノード1つずつ履歴を確認していく
     //破棄予定パケットも計測
+            
     int fl_count = 0, nc_count = 0;
     for (int neinode = 0; neinode < 5/*NODE_NUM*/; neinode++) {
         fprintf(stdout,"-------------calcing %d node\n",neinode);
