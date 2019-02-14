@@ -44,7 +44,6 @@ FILE * resFile=fopen ("res.tr","wt");
 
 
 // TCL Hooks
-
 int hdr_beacon::offset_;
 
 static class SBcastHeaderClass : public PacketHeaderClass {
@@ -390,8 +389,10 @@ void SBAgent::recv(Packet *p,Handler *h) {
     }*/
     //fprintf(mytraceFile,"neigNUM\tnode:%d\tnei:%d\n",my_addr(),neighbor_count);
     //隣接ノードの状況把握
+    //自ノードはノード1つずつ履歴を確認していく
+    //破棄予定パケットも計測
     int fl_count = 0, nc_count = 0;
-    for (int neinode = 0; neinode < NODE_NUM; neinode++) {
+    for (int neinode = 0; neinode < 5/*NODE_NUM*/; neinode++) {
         fprintf(stdout,"-------------calcing %d node\n",neinode);
         //区切りエントリに基づいて、現在のエントリから遡り、ヒット数を計測
         hitcount[my_addr()] = 0;
@@ -451,12 +452,15 @@ void SBAgent::recv(Packet *p,Handler *h) {
             fprintf(mytraceFile, "err \n");
             return;
         }
-        fprintf(stdout, "neighbor node rate %d, %d\n", fl_count, nc_count);
+       // fprintf(mytraceFile, "node:%d neighbor node %d fl:%d, nc:%d\n",my_addr(),neinode, fl_count, nc_count);
+
 
     }
+    fprintf(mytraceFile, "*node:%d time:%f neighbor node  fl:%d, nc:%d\n",my_addr(),Scheduler::instance().clock(), fl_count, nc_count);
+
     sendercount[my_addr()]++;
     //ステータス決定
-    if (TRANSTH_TYPE == 0){
+    if (TRANSTH_TYPE == 0){//旧方式
         //トポロジ値による自分のステータス決定
         if (mystatus[my_addr()] == STA_CODEWAIT) {
             mystatus[my_addr()] = STA_CODEWAIT;
@@ -478,7 +482,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
             }
         }
     }
-    else if(TRANSTH_TYPE==1){
+    else if(TRANSTH_TYPE==1){//隣接ノード総合判定方式
         //隣接ノードの判定総合結果による自分のステータス決定
         if(mystatus[my_addr()]==STA_CODEWAIT){
             mystatus[my_addr()]=STA_CODEWAIT;
