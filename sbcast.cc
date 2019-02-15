@@ -397,7 +397,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
         aa = 1;
     }
     if(aa==0) {
-        for (int neinode = 0; neinode < 5/*NODE_NUM*/; neinode++) {
+        for (int neinode = 0; neinode < NODE_NUM; neinode++) {
             fprintf(stdout, "-------------calcing %d node\n", neinode);
             //区切りエントリに基づいて、現在のエントリから遡り、ヒット数を計測
             hitcount[my_addr()] = 0;
@@ -411,9 +411,11 @@ void SBAgent::recv(Packet *p,Handler *h) {
             topo_all = (float) hitcount[my_addr()] / (float) bunbo;
             fprintf(stdout, "topo_all:%f (%d/%d)\n", topo_all, hitcount[my_addr()], bunbo);
             fprintf(stdout, "hit:%d\n", hitcount[my_addr()]);
+            int active=1;
             if (hitcount[my_addr()] == 0) {
-                fprintf(stdout, "node%dは自ノード(%d)または非隣接ノードのため打ち切り\n", neinode, my_addr());
-                break;
+                fprintf(stdout, "node%dは自ノード(%d)または非隣接ノードのため無効\n", neinode, my_addr());
+                active=0;
+                //break;
             }
             //ここまでall
 
@@ -449,20 +451,21 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
             fprintf(stdout, "合算topo:%f\n", goukei_topo_temp);
 
-            if (goukei_topo <= SWITCH_TH) {
-                fl_count++;
-            } else if (goukei_topo >= SWITCH_TH) {
-                nc_count++;
-            } else {
-                fprintf(mytraceFile, "err \n");
-                return;
+            if(active==1) {
+                if (goukei_topo <= SWITCH_TH) {
+                    fl_count++;
+                } else if (goukei_topo >= SWITCH_TH) {
+                    nc_count++;
+                } else {
+                    fprintf(mytraceFile, "err \n");
+                    return;
+                }
             }
-            // fprintf(mytraceFile, "node:%d neighbor node %d fl:%d, nc:%d\n",my_addr(),neinode, fl_count, nc_count);
+             //fprintf(mytraceFile, "node:%d neighbor node %d fl:%d, nc:%d\n",my_addr(),neinode, fl_count, nc_count);
 
 
         }
-        fprintf(mytraceFile, "*node:%d time:%f neighbor node  fl:%d, nc:%d\n", my_addr(), Scheduler::instance().clock(),
-                fl_count, nc_count);
+        fprintf(mytraceFile, "*node:%d neighbor node  fl:%d, nc:%d\n", my_addr(), fl_count, nc_count);
     }
     sendercount[my_addr()]++;
     //ステータス決定
