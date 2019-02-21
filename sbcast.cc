@@ -70,7 +70,7 @@ int SBAgent::command(int argc,const char*const* argv) {
 			return TCL_OK;
 		}
 		if(strcmp(argv[1],"base-station")==0){
-			btimer_.resched((double)0.1);//1パケット目の遅延
+			btimer_.resched((double)1.0);//1パケット目の遅延
 			my_addr_ = addr();
 			return TCL_OK;
 		}
@@ -108,7 +108,7 @@ void BcastTimer::expire(Event *e) {
 
 void SBAgent::resetBcastTimer() {
 	// Reschedule the timer for every 0.1 seconds
-	btimer_.resched((double)0.1);
+	btimer_.resched((double)0.25);
 
 }
 
@@ -411,7 +411,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
             topo_all = (float) hitcount[my_addr()] / (float) bunbo;
             fprintf(stdout, "topo_all:%f (%d/%d)\n", topo_all, hitcount[my_addr()], bunbo);
             fprintf(stdout, "hit:%d\n", hitcount[my_addr()]);
-            int active=1;
+            int active=1;//履歴にヒットしない場合は状態カウントしない
             if (hitcount[my_addr()] == 0) {
                 fprintf(stdout, "node%dは自ノード(%d)または非隣接ノードのため無効\n", neinode, my_addr());
                 active=0;
@@ -465,7 +465,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
 
         }
-        fprintf(mytraceFile, "*node:%d neighbor node  fl:%d, nc:%d\n", my_addr(), fl_count, nc_count);
+        //fprintf(mytraceFile, "*node:%d neighbor node  fl:%d, nc:%d\n", my_addr(), fl_count, nc_count);
     }
     sendercount[my_addr()]++;
     //ステータス決定
@@ -515,6 +515,30 @@ void SBAgent::recv(Packet *p,Handler *h) {
             }
         }
     }
+    else if(TRANSTH_TYPE==3){//隣接ノード総合判定方式
+        //隣接ノードの判定総合結果による自分のステータス決定
+        if(mystatus[my_addr()]==STA_CODEWAIT){
+            mystatus[my_addr()]=STA_CODEWAIT;
+        }
+        else if(mystatus[my_addr()]==STA_CODESENDREADY){
+            mystatus[my_addr()]=STA_CODESENDREADY;
+        }
+        else if(neighbor_count<NEIGHBOR_TH){//隣接ノード数が足りない場合強制フラッディング
+            mystatus[my_addr()]=STA_FL;
+        }
+        else {
+            if(nc_count<=fl_count){
+                mystatus[my_addr()]=STA_FL;
+            }
+            else if(fl_count<nc_count){
+                mystatus[my_addr()]=STA_CODEWAIT;
+            }
+            else{
+                fprintf(mytraceFile,"err define my status\n");
+                return;
+            }
+        }
+    }
 
 
     //fprintf(mytraceFile,"TOPO node:%d %d topo:%f\n",my_addr(),mystatus[my_addr()],goukei_topo);
@@ -528,7 +552,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
 		}
 		//受信記録
 		recvlog[my_addr()][ph->pktnum_] = 1;
-        fprintf(mytraceFile, "r\t%f\tnode:%d\tfrom:%d\ttype:%d\tpktNo:%d\tcv:%d\ttopo:%f\tstatus:%d\tnei:%d\n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pkttype_, ph->pktnum_,ph->codevc_,goukei_topo,mystatus[my_addr()],neighbor_count);
+        fprintf(mytraceFile, "r\t%f\tnode:%d\tfrom:%d\ttype:%d\tpktNo:%d\tcv:%d\ttopo:%f\tstatus:%d\tnei:%d\tfl:%d\tnc:%d\n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pkttype_, ph->pktnum_,ph->codevc_,goukei_topo,mystatus[my_addr()],neighbor_count,fl_count,nc_count);
 
         if(my_addr()==1){//デバッグ用
             for(int i=1;i<12;i++) {
