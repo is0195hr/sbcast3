@@ -31,6 +31,8 @@
 #define MAX_PACKET 750
 
 #define TRANSTH_TYPE 1
+#define UNDER_TH 0.33
+#define UPPER_TH 0.66
 
 FILE * mytraceFile=fopen ("mytrace.tr","wt");
 FILE * codelogFile=fopen ("codelog.tr","wt");
@@ -365,7 +367,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
     //直近時間補正
     //未実装
     //トポロジ値計算ここまで
-
+    fprintf(stdout,"-------------------送信者のトポロジ値計算終了\n");
     int neighbor_count = 0;
     int ni;
     //隣接ノード数カウント
@@ -454,20 +456,38 @@ void SBAgent::recv(Packet *p,Handler *h) {
             if(active==1) {
                 if (goukei_topo <= SWITCH_TH) {
                     fl_count++;
+                    fprintf(stdout,"node:%d is dinamic\n",neinode);
                 } else if (goukei_topo >= SWITCH_TH) {
                     nc_count++;
+                    fprintf(stdout,"node:%d is static\n",neinode);
+
                 } else {
                     fprintf(mytraceFile, "err \n");
                     return;
                 }
             }
-             //fprintf(mytraceFile, "node:%d neighbor node %d fl:%d, nc:%d\n",my_addr(),neinode, fl_count, nc_count);
+            else if(active==0){
+                fprintf(stdout,"node:%d is no entry\n",neinode);
+            }
+            fprintf(stdout, "*node:%d neighbor node  fl:%d, nc:%d\n", my_addr(), fl_count, nc_count);
+
+            //fprintf(mytraceFile, "node:%d neighbor node %d fl:%d, nc:%d\n",my_addr(),neinode, fl_count, nc_count);
 
 
         }
         //fprintf(mytraceFile, "*node:%d neighbor node  fl:%d, nc:%d\n", my_addr(), fl_count, nc_count);
+        fprintf(stdout, "*node:%d neighbor node  fl:%d, nc:%d\n", my_addr(), fl_count, nc_count);
+
+        float neigh_topo=0;
+        //  if(fl_count!=0||nc_count!=0)
+        fprintf(stdout, "**node:%d neighbor node  fl:%d, nc:%d\n", my_addr(), fl_count, nc_count);
+        neigh_topo=(float)fl_count/(float)(fl_count+nc_count);
+        fprintf(stdout,"++++++++++++++++++nei:%f\n",neigh_topo);
+        sendercount[my_addr()]++;
+
     }
-    sendercount[my_addr()]++;
+
+
     //ステータス決定
     if (TRANSTH_TYPE == 0){//旧方式
         //トポロジ値による自分のステータス決定
@@ -515,7 +535,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
             }
         }
     }
-    else if(TRANSTH_TYPE==3){//隣接ノード総合判定方式
+    else if(TRANSTH_TYPE==2){//隣接ノード総合判定方式
         //隣接ノードの判定総合結果による自分のステータス決定
         if(mystatus[my_addr()]==STA_CODEWAIT){
             mystatus[my_addr()]=STA_CODEWAIT;
