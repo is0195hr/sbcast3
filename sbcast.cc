@@ -483,9 +483,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
         fprintf(stdout, "**node:%d neighbor node  fl:%d, nc:%d\n", my_addr(), fl_count, nc_count);
         neigh_topo=(float)fl_count/(float)(fl_count+nc_count);
         fprintf(stdout,"++++++++++++++++++nei:%f\n",neigh_topo);
-        sendercount[my_addr()]++;
 
     }
+    sendercount[my_addr()]++;
 
 
     //ステータス決定
