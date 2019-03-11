@@ -19,6 +19,7 @@
 #define STA_FL 0
 #define STA_CODEWAIT 1
 #define STA_CODESENDREADY 2
+#define STA_HYBRID 3
 
 
 #define SWITCH_TH 0.3  //float
@@ -31,8 +32,8 @@
 #define MAX_PACKET 750
 
 #define TRANSTH_TYPE 1
-#define UNDER_TH 0.33
-#define UPPER_TH 0.66
+#define UNDER_TH 0.3
+#define UPPER_TH 0.3
 
 FILE * mytraceFile=fopen ("mytrace.tr","wt");
 FILE * codelogFile=fopen ("codelog.tr","wt");
@@ -393,6 +394,8 @@ void SBAgent::recv(Packet *p,Handler *h) {
     //隣接ノードの状況把握
     //自ノードはノード1つずつ履歴を確認していく
     int fl_count = 0, nc_count = 0;
+    float neigh_topo=0;
+
     //一度受信したパケットは調査しない
     int aa=0;
     if (recvlog[my_addr()][ph->pktnum_] == 1) {
@@ -478,7 +481,6 @@ void SBAgent::recv(Packet *p,Handler *h) {
         //fprintf(mytraceFile, "*node:%d neighbor node  fl:%d, nc:%d\n", my_addr(), fl_count, nc_count);
         fprintf(stdout, "*node:%d neighbor node  fl:%d, nc:%d\n", my_addr(), fl_count, nc_count);
 
-        float neigh_topo=0;
         //  if(fl_count!=0||nc_count!=0)
         fprintf(stdout, "**node:%d neighbor node  fl:%d, nc:%d\n", my_addr(), fl_count, nc_count);
         neigh_topo=(float)fl_count/(float)(fl_count+nc_count);
@@ -511,7 +513,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
             }
         }
     }
-    else if(TRANSTH_TYPE==1){//隣接ノード総合判定方式
+    else if(TRANSTH_TYPE==1){//ハイブリッド
         //隣接ノードの判定総合結果による自分のステータス決定
         if(mystatus[my_addr()]==STA_CODEWAIT){
             mystatus[my_addr()]=STA_CODEWAIT;
@@ -523,11 +525,15 @@ void SBAgent::recv(Packet *p,Handler *h) {
             mystatus[my_addr()]=STA_FL;
         }
         else {
-            if(nc_count<=fl_count){
+            if(neigh_topo<=UNDER_TH){//動的判定
                 mystatus[my_addr()]=STA_FL;
             }
-            else if(fl_count<nc_count){
+            else if(UNDER_TH<neigh_topo && neigh_topo<UPPER_TH){//ハイブリッド判定
+                mystatus[my_addr()]=STA_HYBRID;
+            }
+            else if(UPPER_TH<=neigh_topo){//静的判定
                 mystatus[my_addr()]=STA_CODEWAIT;
+
             }
             else{
                 fprintf(mytraceFile,"err define my status\n");
@@ -1024,6 +1030,34 @@ void SBAgent::recv(Packet *p,Handler *h) {
 					collectNum[my_addr()] = 0;
 				}
 			}
+		}
+		else if(mystatus[my_addr()]==STA_HYBRID){
+		    //ここから符号収集
+            collectlist[my_addr()][collectNum[my_addr()]] = ph->pktnum_;
+            collectNum[my_addr()]++;
+            fprintf(mytraceFile, "hyb\t%f\tnode:%d\tfrom:%d\ttype:%d\tpktNo:%d \n", Scheduler::instance().clock(),
+                    my_addr(), ph->addr(), ph->pkttype_, ph->pktnum_);
+            if(collectNum[my_addr()]+1==CODE_NUM) {//あとひとつあつまれば送信できるとき
+                mystatus[my_addr()] = STA_CODESENDREADY;
+            }
+            //ここまで
+            //ノーマルを1つ送信
+            int tempaddr = ph->addr();
+            ph->addr() = my_addr();
+            ph->pkttype_ = PKT_NORMAL;
+            ch->next_hop() = IP_BROADCAST;
+            ch->addr_type() = NS_AF_NONE;
+            ch->direction() = hdr_cmn::DOWN;
+            fprintf(mytraceFile, "hyb_f\t%f\tnode:%d\tfrom:%d\ttype:%d\tpktNo:%d\n", Scheduler::instance().clock(), my_addr(),tempaddr,ph->pkttype_ ,ph->pktnum_);
+
+            //即時送信
+            send(p,0);
+            //遅延送信
+            //Scheduler::instance().schedule(target_,p,0.01 * Random::uniform());
+		}
+		else{
+		    fprintf(stdout,"Send Err\n");
+            return;
 		}
 		return;
 	}
