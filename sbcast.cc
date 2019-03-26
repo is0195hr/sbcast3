@@ -44,6 +44,8 @@ FILE * createcodeFile=fopen ("createcode.tr","wt");
 FILE * recvhistoryFile=fopen ("rcvhist.tr","wt");
 FILE * recvcodehistoryFile=fopen ("rcvcodehist.tr","wt");
 FILE * resFile=fopen ("res.tr","wt");
+FILE * tpFile=fopen ("tp.tr","wt");
+
 
 
 // TCL Hooks
@@ -475,8 +477,10 @@ void SBAgent::recv(Packet *p,Handler *h) {
             fprintf(stdout, "*node:%d neighbor node  fl:%d, nc:%d\n", my_addr(), fl_count, nc_count);
 
             //fprintf(mytraceFile, "node:%d neighbor node %d fl:%d, nc:%d\n",my_addr(),neinode, fl_count, nc_count);
-
-
+            if(active==1) {
+                fprintf(tpFile, "node:%d\tcalc:%d\tgoukei_topo:%f\ttemp:%f\n", my_addr(), neinode,
+                        goukei_topo, goukei_topo_temp);
+            }
         }
         //fprintf(mytraceFile, "*node:%d neighbor node  fl:%d, nc:%d\n", my_addr(), fl_count, nc_count);
         fprintf(stdout, "*node:%d neighbor node  fl:%d, nc:%d\n", my_addr(), fl_count, nc_count);
@@ -485,10 +489,11 @@ void SBAgent::recv(Packet *p,Handler *h) {
         fprintf(stdout, "**node:%d neighbor node  fl:%d, nc:%d\n", my_addr(), fl_count, nc_count);
         neigh_topo=(float)fl_count/(float)(fl_count+nc_count);
         fprintf(stdout,"++++++++++++++++++nei:%f\n",neigh_topo);
+        //fprintf(tpFile,"node:%d\tfl_count:%d\tnc_count:%d\tNei_topo:%f\tgoukei:%f\n",my_addr(),fl_count,nc_count,neigh_topo,goukei_topo);
 
     }
     sendercount[my_addr()]++;
-
+    //ここここここ
 
     //ステータス決定
     if (TRANSTH_TYPE == 0){//旧方式
