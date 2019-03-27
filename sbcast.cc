@@ -32,8 +32,8 @@
 #define MAX_PACKET 750
 
 #define TRANSTH_TYPE 1
-#define UNDER_TH 0.3
-#define UPPER_TH 0.3
+#define UNDER_TH 0.25
+#define UPPER_TH 0.85
 
 FILE * mytraceFile=fopen ("mytrace.tr","wt");
 FILE * codelogFile=fopen ("codelog.tr","wt");
@@ -415,7 +415,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
                 }
             }
             float topo_all, topo_latest;
-            topo_all = (float) hitcount[my_addr()] / (float) bunbo;
+            topo_all = (float) hitcount[my_addr()] / (float) bunbo;//neinodeの全体トポロジ値
             fprintf(stdout, "topo_all:%f (%d/%d)\n", topo_all, hitcount[my_addr()], bunbo);
             fprintf(stdout, "hit:%d\n", hitcount[my_addr()]);
             int active=1;//履歴にヒットしない場合は状態カウントしない
@@ -459,10 +459,10 @@ void SBAgent::recv(Packet *p,Handler *h) {
             fprintf(stdout, "合算topo:%f\n", goukei_topo_temp);
 
             if(active==1) {
-                if (goukei_topo <= SWITCH_TH) {
+                if (goukei_topo_temp <= SWITCH_TH) {
                     fl_count++;
                     fprintf(stdout,"node:%d is dinamic\n",neinode);
-                } else if (goukei_topo >= SWITCH_TH) {
+                } else if (goukei_topo_temp >= SWITCH_TH) {
                     nc_count++;
                     fprintf(stdout,"node:%d is static\n",neinode);
 
@@ -478,8 +478,8 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
             //fprintf(mytraceFile, "node:%d neighbor node %d fl:%d, nc:%d\n",my_addr(),neinode, fl_count, nc_count);
             if(active==1) {
-                fprintf(tpFile, "node:%d\tcalc:%d\tgoukei_topo:%f\ttemp:%f\n", my_addr(), neinode,
-                        goukei_topo, goukei_topo_temp);
+                //fprintf(tpFile, "node:%d\tcalc:%d\tgoukei_topo:%f\ttemp:%f\ttopo_all:%f\thalftopo:%f\tfl:%d\tnc:%d\tneicount:%d\n", my_addr(), neinode,
+                //        goukei_topo, goukei_topo_temp,topo_all,half_topo,fl_count, nc_count,neighbor_count);
             }
         }
         //fprintf(mytraceFile, "*node:%d neighbor node  fl:%d, nc:%d\n", my_addr(), fl_count, nc_count);
@@ -490,6 +490,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
         neigh_topo=(float)fl_count/(float)(fl_count+nc_count);
         fprintf(stdout,"++++++++++++++++++nei:%f\n",neigh_topo);
         //fprintf(tpFile,"node:%d\tfl_count:%d\tnc_count:%d\tNei_topo:%f\tgoukei:%f\n",my_addr(),fl_count,nc_count,neigh_topo,goukei_topo);
+        fprintf(tpFile,"%f\t%d\t%d\t%f\t%d\t%d\n",Scheduler::instance().clock(),my_addr(),sender[my_addr()][sendercount[my_addr()]],neigh_topo,fl_count,nc_count);
 
     }
     sendercount[my_addr()]++;
@@ -895,15 +896,18 @@ void SBAgent::recv(Packet *p,Handler *h) {
 		fprintf(recvcodehistoryFile,"%d [%d][%d %d %d %d %d]\n",i,recvcodevec[my_addr()][i],recvcode1[my_addr()][i],recvcode2[my_addr()][i],recvcode3[my_addr()][i],recvcode4[my_addr()][i],recvcode5[my_addr()][i]);
     }
 
-    int aru_count=0;
-    for(int i=1;i<BUF;i++) {
-        if(recvlog[my_addr()][i]==1){
-            aru_count++;
-        }
-    }
-    //fprintf(mytraceFile,"node:%d d_rate:%f\n",my_addr(),(float)aru_count/(float)(BUF-1));
-    fprintf(resFile,"node:%d d_rate:%f\n",my_addr(),(float)aru_count/5);
 
+    //到達率計算
+    if(Scheduler::instance().clock()>60&&my_addr()==15){
+        int aru_count = 0;
+        for (int i = 121; i <= 240; i++) {
+            if (recvlog[my_addr()][i] == 1) {
+                aru_count++;
+            }
+        }
+        //fprintf(mytraceFile,"node:%d d_rate:%f\n",my_addr(),(float)aru_count/(float)(BUF-1));
+        fprintf(resFile, "node:%d d_rate:%f\n", my_addr(), (float) aru_count / 120);
+    }
 
 
     //送信動作
@@ -913,9 +917,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
 	}
 	else if(ph->pkttype_==PKT_CODED){
 	    if(flag == 1){//符号パケットを受信して復号に成功した場合
-	        if(CODE_NUM == 2){
+	       /* if(CODE_NUM == 2){
                 fprintf(mytraceFile, "fc\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pktnum_,ph->codevc_);
-
+                fprintf(stdout,"おはよう\n");
                 ph->addr() = my_addr();
                 ph->pkttype_ = PKT_CODED;
                 ch->next_hop() = IP_BROADCAST;
@@ -924,7 +928,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
                 send(p,0);
                 return;
-	        }
+	        }*/
 
 
            /* if (CODE_NUM == 2) {
@@ -945,7 +949,31 @@ void SBAgent::recv(Packet *p,Handler *h) {
                 mystatus[my_addr()] = STA_FL;
                 collectNum[my_addr()] = 0;
             }*/
-	    }
+           //これでいけるか？/*
+           /* if (CODE_NUM == 2) {
+                createCodepacket2(ph->pkt1_, ph->pkt2_);
+                mystatus[my_addr()] = STA_FL;
+                collectNum[my_addr()] = 0;
+
+            } else if (CODE_NUM == 3) {
+                createCodepacket3(ph->pkt1_, ph->pkt2_, ph->pkt3_);
+                mystatus[my_addr()] = STA_FL;
+                collectNum[my_addr()] = 0;
+            }
+            return;*/
+
+            //とりあえず中継のみ
+            fprintf(mytraceFile, "fc\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pktnum_,ph->codevc_);
+
+            ph->addr() = my_addr();
+                ph->pkttype_ = PKT_CODED;
+                ch->next_hop() = IP_BROADCAST;
+                ch->addr_type() = NS_AF_NONE;
+                ch->direction() = hdr_cmn::DOWN;
+                send(p,0);
+                return;
+
+        }
 	    else if(flag == 0){//復号失敗、復号失敗時にreturnしているのでここには到達しないはず
 	        fprintf(mytraceFile,"%d\n",flag);
 	    }
