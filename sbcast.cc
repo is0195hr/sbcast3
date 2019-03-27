@@ -145,6 +145,7 @@ static int dcwaitvec[BUF][BUF];
 static int decodequeuecount[BUF];
 
 static int sender[BUF][BUF];
+static int senderheavy[BUF][BUF];
 static float recvtime[BUF][BUF];
 static int sendercount[BUF];
 static int topocount[BUF];
@@ -180,6 +181,7 @@ void SBAgent::sendBeacon() {
 				recvcodeFlag[i][j]=0;
                 collectlist[i][j]=-2;
                 sender[i][j]=-1;
+                senderheavy[i][j]=0;
                 recvtime[i][j]=-1;
                 dcwait1[i][j]=-1;
 				dcwait2[i][j]=-1;
@@ -288,6 +290,17 @@ void SBAgent::recv(Packet *p,Handler *h) {
     //送信者と時刻を記録
     sender[my_addr()][sendercount[my_addr()]] = ph->addr();
     recvtime[my_addr()][sendercount[my_addr()]] = Scheduler::instance().clock();
+    //パケット種別に応じて重みづけ
+    if(ph->pkttype_==PKT_NORMAL){
+        senderheavy[my_addr()][sendercount[my_addr()]]=1;
+    }
+    else if(ph->pkttype_==PKT_CODED){
+        senderheavy[my_addr()][sendercount[my_addr()]]=CODE_NUM;
+    }
+    else{
+        senderheavy[my_addr()][sendercount[my_addr()]]=1;
+    }
+    
     if (my_addr() == 1) {
         fprintf(historyFile, "%f\t%d\n", recvtime[my_addr()][sendercount[my_addr()]],
                 sender[my_addr()][sendercount[my_addr()]]);
