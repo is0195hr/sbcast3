@@ -291,6 +291,14 @@ void SBAgent::recv(Packet *p,Handler *h) {
     if (ph->addr() == my_addr() || my_addr() == 0) {
         return;
     }
+    //パケットカウント
+    if(Scheduler::instance().clock()>30 ) {
+        //packet_count++;
+    }
+    if(Scheduler::instance().clock()>65){
+        fprintf(resFile,"packet_count:%d\n",packet_count);
+
+    }
 
     //送信者と時刻を記録
     sender[my_addr()][sendercount[my_addr()]] = ph->addr();
@@ -600,6 +608,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
 			//fprintf(mytraceFile, "Drop\t%f node:%d from:%d type:%d pktNo:%d \n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pkttype_, ph->pktnum_);
 			return;
 		}
+        if(Scheduler::instance().clock()>30 ) {
+            packet_count++;
+        }
 		//受信記録
 		recvlog[my_addr()][ph->pktnum_] = 1;
         fprintf(mytraceFile, "r\t%f\tnode:%d\tfrom:%d\ttype:%d\tpktNo:%d\tcv:%d\ttopo:%f\tstatus:%d\tnei:%d\tfl:%d\tnc:%d\n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pkttype_, ph->pktnum_,ph->codevc_,goukei_topo,mystatus[my_addr()],neighbor_count,fl_count,nc_count);
@@ -639,7 +650,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
 			fprintf(mytraceFile, "Err \t%f node:%d from:%d type:%d pktNo:%d \n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pkttype_, ph->pktnum_);
 			return;
 		}*/
-
+        if(Scheduler::instance().clock()>30 ) {
+            packet_count++;
+        }
     	//受信記録
 		recvcodelog[my_addr()][recvcodecount[my_addr()]] = ph->pktnum_;
 		recvcodevec[my_addr()][recvcodecount[my_addr()]] = ph->codevc_;
@@ -931,7 +944,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
 
     //到達率計算
-    if(Scheduler::instance().clock()>60&&my_addr()==17){
+    if(Scheduler::instance().clock()>60&&my_addr()==8){
         int aru_count = 0;
         for (int i = 121; i <= 240; i++) {
             if (recvlog[my_addr()][i] == 1) {
@@ -945,8 +958,8 @@ void SBAgent::recv(Packet *p,Handler *h) {
             fprintf(resFile,"%d",recvlog[my_addr()][i]);
         }
         fprintf(resFile,"\n");
-
     }
+
 
 
     //送信動作
