@@ -25,6 +25,7 @@ struct hdr_beacon {
     int pkt1_,pkt2_,pkt3_,pkt4_,pkt5_;
     int codenum_;
     int codevc_;
+    int hop_count_;
     inline nsaddr_t & addr() { return addr_; }
     inline u_int8_t & seq_num() { return seq_num_; }
     static int offset_;
