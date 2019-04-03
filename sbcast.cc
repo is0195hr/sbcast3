@@ -4,7 +4,7 @@
 
 #define CODE_NUM 3
 
-#define BUF 900
+#define BUF 1000
 
 #define S 0
 #define R 1
@@ -32,8 +32,8 @@
 #define MAX_PACKET 750
 
 #define TRANSTH_TYPE 1
-#define UNDER_TH 0.25
-#define UPPER_TH 0.85
+#define UNDER_TH 0.2
+#define UPPER_TH 0.8
 
 FILE * mytraceFile=fopen ("mytrace.tr","wt");
 FILE * codelogFile=fopen ("codelog.tr","wt");
@@ -145,7 +145,7 @@ static int dcwaitvec[BUF][BUF];
 static int decodequeuecount[BUF];
 
 static int sender[BUF][BUF];
-static int senderheavy[BUF][BUF];
+static int packetweight[BUF][BUF];
 static float recvtime[BUF][BUF];
 static int sendercount[BUF];
 static int topocount[BUF];
@@ -157,6 +157,8 @@ static int all_rcv_ccount;
 static int all_send_ncount;
 static int all_send_ccount;
 //static int ref[];
+
+static int packet_count;
 
 //int SBAgent::createCodepacket2(int,int);
 void SBAgent::sendRequest(){
@@ -181,7 +183,7 @@ void SBAgent::sendBeacon() {
 				recvcodeFlag[i][j]=0;
                 collectlist[i][j]=-2;
                 sender[i][j]=-1;
-                senderheavy[i][j]=0;
+                packetweight[i][j]=0;
                 recvtime[i][j]=-1;
                 dcwait1[i][j]=-1;
 				dcwait2[i][j]=-1;
@@ -203,6 +205,7 @@ void SBAgent::sendBeacon() {
         all_rcv_ncount=0;
         all_send_ccount=0;
         all_send_ncount=0;
+        packet_count=0;
 
         time_t t = time(NULL);
         srand((unsigned) time(NULL));
@@ -238,6 +241,8 @@ void SBAgent::sendBeacon() {
 	ph->pkt3_=-1;
 	ph->pkt4_=-1;
 	ph->pkt5_=-1;
+	ph->hop_count_=1;
+	ph->encode_count_=-1;
 
 	ch->direction() = hdr_cmn::DOWN;
 	ch->size() = IP_HDR_LEN;
@@ -292,13 +297,13 @@ void SBAgent::recv(Packet *p,Handler *h) {
     recvtime[my_addr()][sendercount[my_addr()]] = Scheduler::instance().clock();
     //パケット種別に応じて重みづけ
     if(ph->pkttype_==PKT_NORMAL){
-        senderheavy[my_addr()][sendercount[my_addr()]]=1;
+        packetweight[my_addr()][sendercount[my_addr()]]=1;
     }
     else if(ph->pkttype_==PKT_CODED){
-        senderheavy[my_addr()][sendercount[my_addr()]]=CODE_NUM;
+        packetweight[my_addr()][sendercount[my_addr()]]=CODE_NUM;
     }
     else{
-        senderheavy[my_addr()][sendercount[my_addr()]]=1;
+        packetweight[my_addr()][sendercount[my_addr()]]=1;
     }
     
     if (my_addr() == 1) {
@@ -612,6 +617,21 @@ void SBAgent::recv(Packet *p,Handler *h) {
 	    //一度受信した符号パケットは破棄(NORMALとは管理方法が異なる)
         for(int i=0;i<BUF;i++){
             if(recvcodelog[my_addr()][i]==ph->pktnum_){
+                if(ph->codenum_==2) {
+                    if(recvcode1[my_addr()][recvcodecount[my_addr()]] == ph->pkt1_ &&
+                       recvcode2[my_addr()][recvcodecount[my_addr()]] == ph->pkt2_){
+                        return;
+                    }
+
+                }
+                else if(ph->codenum_==3) {
+                    if(recvcode1[my_addr()][recvcodecount[my_addr()]] == ph->pkt1_ &&
+                       recvcode2[my_addr()][recvcodecount[my_addr()]] == ph->pkt2_ &&
+                       recvcode3[my_addr()][recvcodecount[my_addr()]] == ph->pkt3_){
+                        return;
+                    }
+
+                }
                 return;
             }
         }
@@ -647,8 +667,8 @@ void SBAgent::recv(Packet *p,Handler *h) {
 			recvcode4[my_addr()][recvcodecount[my_addr()]] = ph->pkt4_;
 			recvcode5[my_addr()][recvcodecount[my_addr()]] = ph->pkt5_;
 		}
-		fprintf(mytraceFile, "rc\t%f\tnode:%d\tfrom:%d\ttype:%d\tpktNo:%d\tcv:%d\ttopo:%f\tstatus:%d\tnei:%d\t[ %d %d %d %d %d]\n",
-				Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pkttype_, ph->pktnum_,ph->codevc_,goukei_topo,mystatus[my_addr()],neighbor_count,ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+		fprintf(mytraceFile, "rc\t%f\tnode:%d\tfrom:%d\ttype:%d\tpktNo:%d\tcv:%d\ttopo:%f\tstatus:%d\tnei:%d\tenc_count:%d\t[ %d %d %d %d %d]\n",
+				Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pkttype_, ph->pktnum_,ph->codevc_,goukei_topo,mystatus[my_addr()],neighbor_count,ph->encode_count_,ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
 
 
         //受信記録ここまで
@@ -911,7 +931,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
 
     //到達率計算
-    if(Scheduler::instance().clock()>60&&my_addr()==15){
+    if(Scheduler::instance().clock()>60&&my_addr()==17){
         int aru_count = 0;
         for (int i = 121; i <= 240; i++) {
             if (recvlog[my_addr()][i] == 1) {
@@ -920,6 +940,12 @@ void SBAgent::recv(Packet *p,Handler *h) {
         }
         //fprintf(mytraceFile,"node:%d d_rate:%f\n",my_addr(),(float)aru_count/(float)(BUF-1));
         fprintf(resFile, "node:%d d_rate:%f\n", my_addr(), (float) aru_count / 120);
+
+        for(int i=121;i<=240;i++){
+            fprintf(resFile,"%d",recvlog[my_addr()][i]);
+        }
+        fprintf(resFile,"\n");
+
     }
 
 
@@ -962,29 +988,41 @@ void SBAgent::recv(Packet *p,Handler *h) {
                 mystatus[my_addr()] = STA_FL;
                 collectNum[my_addr()] = 0;
             }*/
-           //これでいけるか？/*
-           /* if (CODE_NUM == 2) {
-                createCodepacket2(ph->pkt1_, ph->pkt2_);
-                mystatus[my_addr()] = STA_FL;
-                collectNum[my_addr()] = 0;
+           fprintf(mytraceFile,"%d < %d\n",ph->encode_count_,CODE_NUM);
+           //これでいけるか？
+            if(ph->encode_count_<CODE_NUM) {
+                if (CODE_NUM == 2) {
+                    createCodepacket2(ph->pkt1_, ph->pkt2_, ph->encode_count_);
+                    mystatus[my_addr()] = STA_FL;
+                    collectNum[my_addr()] = 0;
+                    fprintf(mytraceFile, "fc\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pktnum_,ph->codevc_);
 
-            } else if (CODE_NUM == 3) {
-                createCodepacket3(ph->pkt1_, ph->pkt2_, ph->pkt3_);
-                mystatus[my_addr()] = STA_FL;
-                collectNum[my_addr()] = 0;
+
+                } else if (CODE_NUM == 3) {
+                    createCodepacket3(ph->pkt1_, ph->pkt2_, ph->pkt3_, ph->encode_count_);
+                    mystatus[my_addr()] = STA_FL;
+                    collectNum[my_addr()] = 0;
+                    fprintf(mytraceFile, "rec\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pktnum_,ph->codevc_);
+
+                }
+
             }
-            return;*/
+            else{
+                fprintf(mytraceFile,"return\n");
+                return;
+            }
+            return;
 
             //とりあえず中継のみ
-            fprintf(mytraceFile, "fc\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pktnum_,ph->codevc_);
-
-            ph->addr() = my_addr();
+        /*    fprintf(mytraceFile, "fc\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pktnum_,ph->codevc_);
+                ph->hop_count_++;
+                ph->addr() = my_addr();
                 ph->pkttype_ = PKT_CODED;
                 ch->next_hop() = IP_BROADCAST;
                 ch->addr_type() = NS_AF_NONE;
                 ch->direction() = hdr_cmn::DOWN;
                 send(p,0);
-                return;
+                return;*/
 
         }
 	    else if(flag == 0){//復号失敗、復号失敗時にreturnしているのでここには到達しないはず
@@ -1010,6 +1048,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
 		    int tempaddr = ph->addr();
 			ph->addr() = my_addr();
 			ph->pkttype_ = PKT_NORMAL;
+			ph->hop_count_++;
 			ch->next_hop() = IP_BROADCAST;
 			ch->addr_type() = NS_AF_NONE;
 			ch->direction() = hdr_cmn::DOWN;
@@ -1056,22 +1095,21 @@ void SBAgent::recv(Packet *p,Handler *h) {
                 }
 
 				if (CODE_NUM == 2) {
-					createCodepacket2(collectlist[my_addr()][0], collectlist[my_addr()][1]);
-
+					createCodepacket2(collectlist[my_addr()][0], collectlist[my_addr()][1],1);
 					mystatus[my_addr()] = STA_FL;
 					collectNum[my_addr()] = 0;
 				} else if (CODE_NUM == 3) {
-					createCodepacket3(collectlist[my_addr()][0], collectlist[my_addr()][1], collectlist[my_addr()][2]);
+					createCodepacket3(collectlist[my_addr()][0], collectlist[my_addr()][1], collectlist[my_addr()][2],1);
 					mystatus[my_addr()] = STA_FL;
 					collectNum[my_addr()] = 0;
 				} else if (CODE_NUM == 4) {
 					createCodepacket4(collectlist[my_addr()][0], collectlist[my_addr()][1], collectlist[my_addr()][2],
-									  collectlist[my_addr()][3]);
+									  collectlist[my_addr()][3],1);
 					mystatus[my_addr()] = STA_FL;
 					collectNum[my_addr()] = 0;
 				} else if (CODE_NUM == 5) {
 					createCodepacket5(collectlist[my_addr()][0], collectlist[my_addr()][1], collectlist[my_addr()][2],
-									  collectlist[my_addr()][3], collectlist[my_addr()][4]);
+									  collectlist[my_addr()][3], collectlist[my_addr()][4],1);
 					mystatus[my_addr()] = STA_FL;
 					collectNum[my_addr()] = 0;
 				}
@@ -1110,7 +1148,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
 }
 
 
-int SBAgent::createCodepacket2(int pkt_1, int pkt_2){
+int SBAgent::createCodepacket2(int pkt_1, int pkt_2, int encode_count){
     Packet* p = allocpkt();
     struct hdr_cmn* ch = HDR_CMN(p);
     struct hdr_ip* ih = HDR_IP(p);
@@ -1128,6 +1166,9 @@ int SBAgent::createCodepacket2(int pkt_1, int pkt_2){
     ph->pkt3_=-1;
     ph->pkt4_=-1;
     ph->pkt5_=-1;
+    ph->hop_count_=1;
+    encode_count++;
+    ph->encode_count_=encode_count;
 
     ch->direction() = hdr_cmn::DOWN;
     ch->size() = IP_HDR_LEN;
@@ -1150,7 +1191,7 @@ int SBAgent::createCodepacket2(int pkt_1, int pkt_2){
     //Scheduler::instance().schedule(target_,p,0.01 * Random::uniform());
 	codepktnum++;
 }
-int SBAgent::createCodepacket3(int pkt_1, int pkt_2 , int pkt_3) {
+int SBAgent::createCodepacket3(int pkt_1, int pkt_2 , int pkt_3, int encode_count) {
 	fprintf(createcodeFile,"%f node:%d :%d + %d + %d\n",Scheduler::instance().clock(),my_addr(),pkt_1,pkt_2,pkt_3);
 	Packet* p = allocpkt();
 	struct hdr_cmn* ch = HDR_CMN(p);
@@ -1170,8 +1211,12 @@ int SBAgent::createCodepacket3(int pkt_1, int pkt_2 , int pkt_3) {
 	ph->pkt3_=pkt_3;
 	ph->pkt4_=-1;
 	ph->pkt5_=-1;
+    ph->hop_count_=1;
+    encode_count++;
+    ph->encode_count_=encode_count;
 
-	ch->direction() = hdr_cmn::DOWN;
+    fprintf(mytraceFile,"%d ,%d\n",encode_count,ph->encode_count_);
+    ch->direction() = hdr_cmn::DOWN;
 	ch->size() = IP_HDR_LEN;
 	ch->error() = 0;
 	ch->next_hop() = IP_BROADCAST;
@@ -1184,7 +1229,7 @@ int SBAgent::createCodepacket3(int pkt_1, int pkt_2 , int pkt_3) {
 	ih->ttl() = IP_DEF_TTL;
     fprintf(createcodeFile,"node:%d\t%f\tpktNo:%d\tvc:%d\t%d\t%d\t%d\t%d\t%d\n",my_addr(),Scheduler::instance().clock(),ph->pktnum_,ph->codevc_,ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
 
-    fprintf(mytraceFile, "sc\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\n", Scheduler::instance().clock(), my_addr(),my_addr(),ph->pktnum_,ph->codevc_);
+    fprintf(mytraceFile, "sc\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\tencode:%d\n", Scheduler::instance().clock(), my_addr(),my_addr(),ph->pktnum_,ph->codevc_,encode_count);
     //即時送信
     send(p,0);
     //遅延送信
@@ -1192,7 +1237,7 @@ int SBAgent::createCodepacket3(int pkt_1, int pkt_2 , int pkt_3) {
 	codepktnum++;
 
 }
-int SBAgent::createCodepacket4(int pkt_1, int pkt_2 , int pkt_3, int pkt_4) {
+int SBAgent::createCodepacket4(int pkt_1, int pkt_2 , int pkt_3, int pkt_4, int encode_count) {
 	fprintf(stdout,"create4:%d + %d + %d + %d\n",pkt_1,pkt_2,pkt_3,pkt_4);
 	Packet* p = allocpkt();
 	struct hdr_cmn* ch = HDR_CMN(p);
@@ -1213,8 +1258,11 @@ int SBAgent::createCodepacket4(int pkt_1, int pkt_2 , int pkt_3, int pkt_4) {
 	ph->pkt3_=pkt_3;
 	ph->pkt4_=pkt_4;
 	ph->pkt5_=-1;
+    ph->hop_count_=1;
+    ph->encode_count_=encode_count++;
 
-	ch->direction() = hdr_cmn::DOWN;
+
+    ch->direction() = hdr_cmn::DOWN;
 	ch->size() = IP_HDR_LEN;
 	ch->error() = 0;
 	ch->next_hop() = IP_BROADCAST;
@@ -1233,7 +1281,7 @@ int SBAgent::createCodepacket4(int pkt_1, int pkt_2 , int pkt_3, int pkt_4) {
     //遅延送信
     //Scheduler::instance().schedule(target_,p,0.01 * Random::uniform());
 }
-int SBAgent::createCodepacket5(int pkt_1, int pkt_2 , int pkt_3, int pkt_4, int pkt_5) {
+int SBAgent::createCodepacket5(int pkt_1, int pkt_2 , int pkt_3, int pkt_4, int pkt_5, int encode_count) {
 	fprintf(stdout,"create5\n");
 	Packet* p = allocpkt();
 	struct hdr_cmn* ch = HDR_CMN(p);
@@ -1254,8 +1302,11 @@ int SBAgent::createCodepacket5(int pkt_1, int pkt_2 , int pkt_3, int pkt_4, int 
 	ph->pkt3_=pkt_3;
 	ph->pkt4_=pkt_4;
 	ph->pkt5_=pkt_5;
+    ph->hop_count_=1;
+    ph->encode_count_=encode_count++;
 
-	ch->direction() = hdr_cmn::DOWN;
+
+    ch->direction() = hdr_cmn::DOWN;
 	ch->size() = IP_HDR_LEN;
 	ch->error() = 0;
 	ch->next_hop() = IP_BROADCAST;

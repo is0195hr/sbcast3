@@ -66,10 +66,10 @@ public:
     void sendBeacon();
     void sendRequest();
     void resetBcastTimer();
-    int createCodepacket2(int,int);
-    int createCodepacket3(int,int,int);
-    int createCodepacket4(int,int,int,int);
-    int createCodepacket5(int,int,int,int,int);
+    int createCodepacket2(int,int, int);
+    int createCodepacket3(int,int,int, int);
+    int createCodepacket4(int,int,int,int, int);
+    int createCodepacket5(int,int,int,int,int, int);
     inline nsaddr_t & my_addr() { return my_addr_;}
 };
 #endif /* SBCAST_H_ */
