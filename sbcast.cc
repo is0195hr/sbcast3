@@ -32,8 +32,8 @@
 #define MAX_PACKET 750
 
 #define TRANSTH_TYPE 1
-#define UNDER_TH 0.2
-#define UPPER_TH 0.8
+#define UNDER_TH 0
+#define UPPER_TH 0
 
 FILE * mytraceFile=fopen ("mytrace.tr","wt");
 FILE * codelogFile=fopen ("codelog.tr","wt");
@@ -45,6 +45,8 @@ FILE * recvhistoryFile=fopen ("rcvhist.tr","wt");
 FILE * recvcodehistoryFile=fopen ("rcvcodehist.tr","wt");
 FILE * resFile=fopen ("res.tr","wt");
 FILE * tpFile=fopen ("tp.tr","wt");
+FILE * tempFile=fopen ("temp.tr","wt");
+FILE * temp2File=fopen ("temp2.tr","wt");
 
 
 
@@ -131,6 +133,7 @@ static int recvcode3[BUF][BUF];
 static int recvcode4[BUF][BUF];
 static int recvcode5[BUF][BUF];
 static int recvcodeFlag[BUF][BUF];
+static int sendcodelog[BUF][BUF];
 
 
 static int mystatus[BUF];
@@ -191,6 +194,7 @@ void SBAgent::sendBeacon() {
 				dcwait4[i][j]=-1;
 				dcwait5[i][j]=-1;
 				dcwaitvec[i][j]=-1;
+                sendcodelog[i][j]=-1;
             }
             mystatus[i]=0;
             collectNum[i]=0;
@@ -389,6 +393,20 @@ void SBAgent::recv(Packet *p,Handler *h) {
     }
     fprintf(stdout, "半分 %f,%d,%d\n", half_topo, half_hit, ((kosuu / 2) + 1));
 
+    //履歴印字テスト
+    fprintf(tempFile,"%d %d %d sender\t",my_addr(),hitcount[my_addr()],bunbo);
+    for(int i=sendercount[my_addr()];0<=i;i--){
+        fprintf(tempFile,"%d ",sender[my_addr()][i]);
+    }
+    fprintf(tempFile,"\n");
+    fprintf(tempFile,"%d %d %d time\t",my_addr(),hitcount[my_addr()],bunbo);
+    for(int i=sendercount[my_addr()];0<=i;i--){
+        fprintf(tempFile,"%.4f ",recvtime[my_addr()][i]);
+    }
+    fprintf(tempFile,"\n");
+
+
+
     //全体+half
     float goukei_topo;
     goukei_topo = (topo_all + half_topo) / 2;
@@ -583,6 +601,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
         }
         else if(neighbor_count<NEIGHBOR_TH){//隣接ノード数が足りない場合強制フラッディング
             mystatus[my_addr()]=STA_FL;
+            fprintf(mytraceFile,"強制フラッディング\n");
         }
         else {
             if(nc_count<=fl_count){
@@ -1016,7 +1035,6 @@ void SBAgent::recv(Packet *p,Handler *h) {
                     mystatus[my_addr()] = STA_FL;
                     collectNum[my_addr()] = 0;
                     fprintf(mytraceFile, "rec\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pktnum_,ph->codevc_);
-
                 }
 
             }
@@ -1108,21 +1126,21 @@ void SBAgent::recv(Packet *p,Handler *h) {
                 }
 
 				if (CODE_NUM == 2) {
-					createCodepacket2(collectlist[my_addr()][0], collectlist[my_addr()][1],1);
+					createCodepacket2(collectlist[my_addr()][0], collectlist[my_addr()][1],0);
 					mystatus[my_addr()] = STA_FL;
 					collectNum[my_addr()] = 0;
 				} else if (CODE_NUM == 3) {
-					createCodepacket3(collectlist[my_addr()][0], collectlist[my_addr()][1], collectlist[my_addr()][2],1);
+					createCodepacket3(collectlist[my_addr()][0], collectlist[my_addr()][1], collectlist[my_addr()][2],0);
 					mystatus[my_addr()] = STA_FL;
 					collectNum[my_addr()] = 0;
 				} else if (CODE_NUM == 4) {
 					createCodepacket4(collectlist[my_addr()][0], collectlist[my_addr()][1], collectlist[my_addr()][2],
-									  collectlist[my_addr()][3],1);
+									  collectlist[my_addr()][3],0);
 					mystatus[my_addr()] = STA_FL;
 					collectNum[my_addr()] = 0;
 				} else if (CODE_NUM == 5) {
 					createCodepacket5(collectlist[my_addr()][0], collectlist[my_addr()][1], collectlist[my_addr()][2],
-									  collectlist[my_addr()][3], collectlist[my_addr()][4],1);
+									  collectlist[my_addr()][3], collectlist[my_addr()][4],0);
 					mystatus[my_addr()] = STA_FL;
 					collectNum[my_addr()] = 0;
 				}
