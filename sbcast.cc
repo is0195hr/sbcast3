@@ -1,6 +1,7 @@
 #include "sbcast.h"
 #include <random.h>
 #include <time.h>
+#include "sbcast_output.h"
 
 #define CODE_NUM 3
 
@@ -210,7 +211,8 @@ void SBAgent::sendBeacon() {
         all_send_ccount=0;
         all_send_ncount=0;
         packet_count=0;
-
+        int a=test(1, 2);
+        fprintf(mytraceFile,"test:%d\n",a);
         time_t t = time(NULL);
         srand((unsigned) time(NULL));
         int seed = rand()%256+1;
@@ -272,6 +274,7 @@ void SBAgent::sendBeacon() {
     }
     //即時送信
 	send(p,0);
+    test2('s',my_addr());
     //遅延送信
     //Scheduler::instance().schedule(target_,p,DELAY * Random::uniform());
 	pktnum++;
@@ -349,7 +352,8 @@ void SBAgent::recv(Packet *p,Handler *h) {
     //区切り時間のエントリ番号を検索
     for (int i = sendercount[my_addr()]; recvtime[my_addr()][i] >= time_limit; i--) {
         topocount[my_addr()] = i;
-        bunbo++;
+        //bunbo++;
+        bunbo=bunbo+packetweight[my_addr()][i];
         //fprintf(stdout,"for:%d\n",i);
     }
     fprintf(stdout, "区切りエントリはtopocount %d\n", topocount[my_addr()]);
@@ -357,7 +361,8 @@ void SBAgent::recv(Packet *p,Handler *h) {
     hitcount[my_addr()] = 0;
     for (int i = sendercount[my_addr()]; i >= topocount[my_addr()]; i--) {
         if (sender[my_addr()][i] == ph->addr()) {
-            hitcount[my_addr()]++;
+            //hitcount[my_addr()]++;
+            hitcount[my_addr()]=hitcount[my_addr()]+packetweight[my_addr()][i];
             //fprintf(stdout,"time:%f\n",recvtime[my_addr()][i]);
         }
     }
