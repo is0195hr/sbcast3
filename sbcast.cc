@@ -33,8 +33,8 @@
 #define MAX_PACKET 750
 
 #define TRANSTH_TYPE 1
-#define UNDER_TH 0
-#define UPPER_TH 0
+#define UNDER_TH 0.0
+#define UPPER_TH 0.0
 
 FILE * mytraceFile=fopen ("mytrace.tr","wt");
 FILE * codelogFile=fopen ("codelog.tr","wt");
@@ -968,7 +968,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
 
     //到達率計算
-    if(Scheduler::instance().clock()>60&&my_addr()==8){
+    if(Scheduler::instance().clock()>60&&my_addr()==17){
         int aru_count = 0;
         for (int i = 121; i <= 240; i++) {
             if (recvlog[my_addr()][i] == 1) {
