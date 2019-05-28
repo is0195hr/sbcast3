@@ -33,8 +33,8 @@
 #define MAX_PACKET 750
 
 #define TRANSTH_TYPE 1
-#define UNDER_TH 0.0
-#define UPPER_TH 0.0
+#define UNDER_TH 1
+#define UPPER_TH 1
 
 FILE * mytraceFile=fopen ("mytrace.tr","wt");
 FILE * codelogFile=fopen ("codelog.tr","wt");
@@ -49,6 +49,7 @@ FILE * tpFile=fopen ("tp.tr","wt");
 FILE * tempFile=fopen ("temp.tr","wt");
 FILE * temp2File=fopen ("temp2.tr","wt");
 
+FILE * calcFile=fopen ("calc.tr","wt");
 
 
 // TCL Hooks
@@ -326,6 +327,20 @@ void SBAgent::recv(Packet *p,Handler *h) {
                 sender[my_addr()][sendercount[my_addr()]]);
     }
 
+    //隣接ノード数
+    int neighbor_count = 0;
+    int ni;
+    //隣接ノード数カウント
+    for (int i = 0; i < BUF; i++) {
+        for (int j = sendercount[my_addr()]; j >= topocount[my_addr()]; j--) {
+            if (sender[my_addr()][j] == i) {
+                neighbor_count++;
+                break;
+            }
+        }
+    }
+
+
     //トポロジ値を算出
     //区切り時間を計算
     float time_limit = 0;
@@ -352,20 +367,55 @@ void SBAgent::recv(Packet *p,Handler *h) {
     //区切り時間のエントリ番号を検索
     for (int i = sendercount[my_addr()]; recvtime[my_addr()][i] >= time_limit; i--) {
         topocount[my_addr()] = i;
-        //bunbo++;
-        bunbo=bunbo+packetweight[my_addr()][i];
-        //fprintf(stdout,"for:%d\n",i);
+        bunbo++;
+        //bunbo=bunbo+packetweight[my_addr()][i];
     }
     fprintf(stdout, "区切りエントリはtopocount %d\n", topocount[my_addr()]);
     //区切りエントリに基づいて、現在のエントリから遡り、ヒット数を計測
     hitcount[my_addr()] = 0;
     for (int i = sendercount[my_addr()]; i >= topocount[my_addr()]; i--) {
         if (sender[my_addr()][i] == ph->addr()) {
-            //hitcount[my_addr()]++;
-            hitcount[my_addr()]=hitcount[my_addr()]+packetweight[my_addr()][i];
+            hitcount[my_addr()]++;
+            //hitcount[my_addr()]=hitcount[my_addr()]+packetweight[my_addr()][i];
             //fprintf(stdout,"time:%f\n",recvtime[my_addr()][i]);
         }
     }
+    int temp1,freq_max=0,freq_min=0;
+    for(int i=0;i<NODE_NUM;i++) {
+        temp1=0;
+        for (int j = sendercount[my_addr()]; j >= topocount[my_addr()]; j--) {
+            if (sender[my_addr()][j] == i) {
+                temp1++;
+            }
+
+        }
+        if(temp1!=0){
+            if(freq_max<=temp1){
+                freq_max=temp1;
+            }
+            if(freq_min==0){
+                freq_min=temp1;
+            }
+            if(freq_min>temp1){
+                freq_min=temp1;
+            }
+        }
+    }
+
+    float neigh_freq=0;
+    neigh_freq = (float)bunbo/(float)neighbor_count;
+    float sender_freq=0;
+    sender_freq=hitcount[my_addr()];
+    fprintf(tempFile,"node:%d,neigh:%d,bunbo:%d,ave:%f,senderfreq:%f,",my_addr(),neighbor_count,bunbo,neigh_freq,sender_freq);
+    fprintf(tempFile,"max:%d,min:%d,",freq_max,freq_min);
+
+    float sender_freq_seiki;
+  //  sender_freq_seiki=(sender_freq-(float)freq_min)/(float)((float)freq_max-(float)freq_min);
+    fprintf(tempFile,"seiki:%f\n",sender_freq_seiki);
+
+
+
+
     float topo_all, topo_latest;
     topo_all = (float) hitcount[my_addr()] / (float) bunbo;
     fprintf(stdout, "topo_all:%f (%d/%d)\n", topo_all, hitcount[my_addr()], bunbo);
@@ -398,19 +448,6 @@ void SBAgent::recv(Packet *p,Handler *h) {
     }
     fprintf(stdout, "半分 %f,%d,%d\n", half_topo, half_hit, ((kosuu / 2) + 1));
 
-    //履歴印字テスト
-    fprintf(tempFile,"%d %d %d sender\t",my_addr(),hitcount[my_addr()],bunbo);
-    for(int i=sendercount[my_addr()];0<=i;i--){
-        fprintf(tempFile,"%d ",sender[my_addr()][i]);
-    }
-    fprintf(tempFile,"\n");
-    fprintf(tempFile,"%d %d %d time\t",my_addr(),hitcount[my_addr()],bunbo);
-    for(int i=sendercount[my_addr()];0<=i;i--){
-        fprintf(tempFile,"%.4f ",recvtime[my_addr()][i]);
-    }
-    fprintf(tempFile,"\n");
-
-
 
     //全体+half
     float goukei_topo;
@@ -420,17 +457,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
     //未実装
     //トポロジ値計算ここまで
     fprintf(stdout,"-------------------送信者のトポロジ値計算終了\n");
-    int neighbor_count = 0;
-    int ni;
-    //隣接ノード数カウント
-    for (int i = 0; i < BUF; i++) {
-        for (int j = sendercount[my_addr()]; j >= topocount[my_addr()]; j--) {
-            if (sender[my_addr()][j] == i) {
-                neighbor_count++;
-                break;
-            }
-        }
-    }
+
 /*
     for(int i=sendercount[my_addr()];i>=topocount[my_addr()];i--){
         for(ni=0;ni<BUF;ni++){
