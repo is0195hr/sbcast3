@@ -406,11 +406,18 @@ void SBAgent::recv(Packet *p,Handler *h) {
     neigh_freq = (float)bunbo/(float)neighbor_count;
     float sender_freq=0;
     sender_freq=hitcount[my_addr()];
-    fprintf(tempFile,"node:%d,neigh:%d,bunbo:%d,ave:%f,senderfreq:%f,",my_addr(),neighbor_count,bunbo,neigh_freq,sender_freq);
+    fprintf(tempFile,"node:%d,neigh:%d,neicount:%d,bunbo:%d,ave:%f,senderfreq:%f,",my_addr(),ph->addr(),neighbor_count,bunbo,neigh_freq,sender_freq);
     fprintf(tempFile,"max:%d,min:%d,",freq_max,freq_min);
 
-    float sender_freq_seiki;
-  //  sender_freq_seiki=(sender_freq-(float)freq_min)/(float)((float)freq_max-(float)freq_min);
+    float sender_freq_seiki,freq_bunbo;
+    freq_bunbo=(float)freq_max-(float)freq_min;
+    if(freq_max==freq_min){
+        freq_bunbo=0;
+    }
+	else{
+
+    sender_freq_seiki=(sender_freq-(float)freq_min)/freq_bunbo;
+	}
     fprintf(tempFile,"seiki:%f\n",sender_freq_seiki);
 
 
