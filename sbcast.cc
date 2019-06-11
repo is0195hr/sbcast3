@@ -46,7 +46,7 @@ FILE * recvhistoryFile=fopen ("rcvhist.tr","wt");
 FILE * recvcodehistoryFile=fopen ("rcvcodehist.tr","wt");
 FILE * resFile=fopen ("res.tr","wt");
 FILE * tpFile=fopen ("tp.tr","wt");
-FILE * tempFile=fopen ("temp.tr","wt");
+FILE * tempFile=fopen ("temp.csv","wt");
 FILE * temp2File=fopen ("temp2.tr","wt");
 
 FILE * calcFile=fopen ("calc.tr","wt");
@@ -406,20 +406,35 @@ void SBAgent::recv(Packet *p,Handler *h) {
     neigh_freq = (float)bunbo/(float)neighbor_count;
     float sender_freq=0;
     sender_freq=hitcount[my_addr()];
-    fprintf(tempFile,"node:%d,neigh:%d,neicount:%d,bunbo:%d,ave:%f,senderfreq:%f,",my_addr(),ph->addr(),neighbor_count,bunbo,neigh_freq,sender_freq);
-    fprintf(tempFile,"max:%d,min:%d,",freq_max,freq_min);
+    static int aaa=0;
+    if(aaa==0){
+        fprintf(tempFile,"node,neigh,neicount,bunbo,ave,senderfreq,max,min,seiki,hantei\n");
+        aaa=1;
+    }
+    fprintf(tempFile,"%d,%d,%d,%d,%f,%f,",my_addr(),ph->addr(),neighbor_count,bunbo,neigh_freq,sender_freq);
+    fprintf(tempFile,"%d,%d,",freq_max,freq_min);
+
 
     float sender_freq_seiki,freq_bunbo;
+    int force=0;
     freq_bunbo=(float)freq_max-(float)freq_min;
     if(freq_max==freq_min){
-        freq_bunbo=0;
+        sender_freq_seiki=1;
+        force=1;
     }
 	else{
-
-    sender_freq_seiki=(sender_freq-(float)freq_min)/freq_bunbo;
+        sender_freq_seiki=(sender_freq-(float)freq_min)/freq_bunbo;
 	}
-    fprintf(tempFile,"seiki:%f\n",sender_freq_seiki);
-
+    fprintf(tempFile,"%f,",sender_freq_seiki);
+    if(force==1){
+        fprintf(tempFile,"f");
+    }
+    if(sender_freq_seiki>0.5){
+        fprintf(tempFile,"s\n");
+    }
+    else{
+        fprintf(tempFile,"d\n");
+    }
 
 
 
