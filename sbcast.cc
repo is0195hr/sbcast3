@@ -47,7 +47,7 @@ FILE * recvcodehistoryFile=fopen ("rcvcodehist.tr","wt");
 FILE * resFile=fopen ("res.tr","wt");
 FILE * tpFile=fopen ("tp.tr","wt");
 FILE * tempFile=fopen ("temp.csv","wt");
-FILE * temp2File=fopen ("temp2.tr","wt");
+FILE * temp2File=fopen ("temp2.csv","wt");
 
 FILE * calcFile=fopen ("calc.tr","wt");
 
@@ -402,13 +402,14 @@ void SBAgent::recv(Packet *p,Handler *h) {
         }
     }
 
+
     float neigh_freq=0;
     neigh_freq = (float)bunbo/(float)neighbor_count;
     float sender_freq=0;
     sender_freq=hitcount[my_addr()];
     static int aaa=0;
     if(aaa==0){
-        fprintf(tempFile,"node,neigh,neicount,bunbo,ave,senderfreq,max,min,seiki,hantei\n");
+        fprintf(tempFile,"node,neigh,neicount,bunbo,ave,senderfreq,max,min,seiki,force,0-1hantei,ave-hantei\n");
         aaa=1;
     }
     fprintf(tempFile,"%d,%d,%d,%d,%f,%f,",my_addr(),ph->addr(),neighbor_count,bunbo,neigh_freq,sender_freq);
@@ -427,15 +428,24 @@ void SBAgent::recv(Packet *p,Handler *h) {
 	}
     fprintf(tempFile,"%f,",sender_freq_seiki);
     if(force==1){
-        fprintf(tempFile,"f");
+        fprintf(tempFile,"f,");
     }
-    if(sender_freq_seiki>0.5){
+    else{
+        fprintf(tempFile,",");
+
+    }
+    if(sender_freq_seiki>=0.5){
+        fprintf(tempFile,"s,");
+    }
+    else{
+        fprintf(tempFile,"d,");
+    }
+    if(sender_freq>=neigh_freq){
         fprintf(tempFile,"s\n");
     }
     else{
         fprintf(tempFile,"d\n");
     }
-
 
 
     float topo_all, topo_latest;
