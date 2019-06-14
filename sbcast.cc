@@ -381,15 +381,15 @@ void SBAgent::recv(Packet *p,Handler *h) {
         }
     }
     int temp1,freq_max=0,freq_min=0;
-    for(int i=0;i<NODE_NUM;i++) {
-        temp1=0;
+    for(int i=0;i<NODE_NUM;i++) {//max,minを求める
+        temp1=0;//ヒットしたかどうかのフラグも兼ねる
         for (int j = sendercount[my_addr()]; j >= topocount[my_addr()]; j--) {
             if (sender[my_addr()][j] == i) {
                 temp1++;
             }
 
         }
-        if(temp1!=0){
+        if(temp1!=0){//ヒットがあれば
             if(freq_max<=temp1){
                 freq_max=temp1;
             }
@@ -403,8 +403,22 @@ void SBAgent::recv(Packet *p,Handler *h) {
     }
 
 
+
     float neigh_freq=0;
-    neigh_freq = (float)bunbo/(float)neighbor_count;
+    neigh_freq = (float)bunbo/(float)neighbor_count;//平均
+    float bunsan=0;
+    for(int i=0;i<NODE_NUM;i++){//分散を求める
+        temp1=0;//ヒットしたかどうかのフラグも兼ねる
+        for (int j = sendercount[my_addr()]; j >= topocount[my_addr()]; j--) {
+            if (sender[my_addr()][j] == i) {
+                temp1++;
+            }
+
+        }
+        if(temp1!=0){//ヒットがあれば
+            bunsan=((float)temp1-(float)neigh_freq)*((float)temp1-(float)neigh_freq);
+        }
+    }
     float sender_freq=0;
     sender_freq=hitcount[my_addr()];
     static int aaa=0;
