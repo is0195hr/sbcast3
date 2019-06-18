@@ -428,8 +428,12 @@ void SBAgent::recv(Packet *p,Handler *h) {
         fprintf(tempFile,"node,neigh,neicount,bunbo,ave,senderfreq,bunsan,stdhensa,hendoukeisu,max,min,max-min,seiki,force,0-1hantei,ave-hantei,bunsan-hanteo,hendoukeisuu-hantei,seiki+hendoukeisuu\n");
         aaa=1;
     }
-    fprintf(tempFile,"%d,%d,%d,%d,%d,%f,%f,%f,%f,%f,",my_addr(),ph->addr(),neighbor_count,bunbo,neigh_freq,sender_freq,bunsan,sqrt(bunsan),sqrt(bunsan)/neigh_freq);
-    fprintf(tempFile,"%d,%d,%d",freq_max,freq_min,freq_max-freq_min);
+    fprintf(tempFile,"%d,%d,",my_addr(),ph->addr());
+    fprintf(tempFile,"%d,%d,",neighbor_count,bunbo);
+    fprintf(tempFile,"%f,%f,",neigh_freq,sender_freq);
+    fprintf(tempFile,"%f,%f,%f,",bunsan,sqrt(bunsan),sqrt(bunsan)/neigh_freq);
+
+    fprintf(tempFile,"%d,%d,%d,",freq_max,freq_min,freq_max-freq_min);
 
 
     float sender_freq_seiki,freq_bunbo;
@@ -471,23 +475,28 @@ void SBAgent::recv(Packet *p,Handler *h) {
     }
     //変動係数判定
     if(sqrt(bunsan)/neigh_freq<=0.1){
-        fprintf(tempFile,"low\n");
+        fprintf(tempFile,"low,");
     }
     else{
-        fprintf(tempFile,"high\n");
+        fprintf(tempFile,"high,");
     }
 
     //seiki+変動係数
 
     if(sqrt(bunsan)/neigh_freq<=0.1){
-        fprintf(tempFile,"low\n");
+        fprintf(tempFile,"s\n");
     }
     else{
-        fprintf(tempFile,"high\n");
+        if(sender_freq_seiki>=0.5){
+            fprintf(tempFile,"s\n");
+        }
+        else{
+            fprintf(tempFile,"d\n");
+        }
     }
 
 
-    
+
     float topo_all, topo_latest;
     topo_all = (float) hitcount[my_addr()] / (float) bunbo;
     fprintf(stdout, "topo_all:%f (%d/%d)\n", topo_all, hitcount[my_addr()], bunbo);
