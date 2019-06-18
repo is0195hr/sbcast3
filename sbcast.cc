@@ -27,7 +27,7 @@
 #define TIME_TH 5.0    //float
 #define NEIGHBOR_TH 2  //int
 
-#define NODE_NUM 18
+#define NODE_NUM 50//18
 #define GALOIS 256
 #define DELAY 1.0
 #define MAX_PACKET 750
@@ -406,7 +406,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
     float neigh_freq=0;
     neigh_freq = (float)bunbo/(float)neighbor_count;//平均
-    float bunsan=0;
+    float bunsan=0,bunsan_sum=0;
     for(int i=0;i<NODE_NUM;i++){//分散を求める
         temp1=0;//ヒットしたかどうかのフラグも兼ねる
         for (int j = sendercount[my_addr()]; j >= topocount[my_addr()]; j--) {
@@ -416,18 +416,20 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
         }
         if(temp1!=0){//ヒットがあれば
-            bunsan=((float)temp1-(float)neigh_freq)*((float)temp1-(float)neigh_freq);
+            float bunsan_temp=((float)temp1-(float)neigh_freq)*((float)temp1-(float)neigh_freq);
+            bunsan_sum = bunsan_sum + bunsan_temp;
         }
     }
+    bunsan=bunsan_sum/(float)neighbor_count;
     float sender_freq=0;
     sender_freq=hitcount[my_addr()];
     static int aaa=0;
     if(aaa==0){
-        fprintf(tempFile,"node,neigh,neicount,bunbo,ave,senderfreq,max,min,seiki,force,0-1hantei,ave-hantei\n");
+        fprintf(tempFile,"node,neigh,neicount,bunbo,ave,senderfreq,bunsan,stdhensa,hendoukeisu,max,min,max-min,seiki,force,0-1hantei,ave-hantei,bunsan-hanteo,hendoukeisuu-hantei,seiki+hendoukeisuu\n");
         aaa=1;
     }
-    fprintf(tempFile,"%d,%d,%d,%d,%f,%f,",my_addr(),ph->addr(),neighbor_count,bunbo,neigh_freq,sender_freq);
-    fprintf(tempFile,"%d,%d,",freq_max,freq_min);
+    fprintf(tempFile,"%d,%d,%d,%d,%d,%f,%f,%f,%f,%f,",my_addr(),ph->addr(),neighbor_count,bunbo,neigh_freq,sender_freq,bunsan,sqrt(bunsan),sqrt(bunsan)/neigh_freq);
+    fprintf(tempFile,"%d,%d,%d",freq_max,freq_min,freq_max-freq_min);
 
 
     float sender_freq_seiki,freq_bunbo;
@@ -455,13 +457,37 @@ void SBAgent::recv(Packet *p,Handler *h) {
         fprintf(tempFile,"d,");
     }
     if(sender_freq>=neigh_freq){
-        fprintf(tempFile,"s\n");
+        fprintf(tempFile,"s,");
     }
     else{
-        fprintf(tempFile,"d\n");
+        fprintf(tempFile,"d,");
+    }
+    //分散判定
+    if(bunsan<=1){
+        fprintf(tempFile,"low,");
+    }
+    else{
+        fprintf(tempFile,"high,");
+    }
+    //変動係数判定
+    if(sqrt(bunsan)/neigh_freq<=0.1){
+        fprintf(tempFile,"low\n");
+    }
+    else{
+        fprintf(tempFile,"high\n");
+    }
+
+    //seiki+変動係数
+
+    if(sqrt(bunsan)/neigh_freq<=0.1){
+        fprintf(tempFile,"low\n");
+    }
+    else{
+        fprintf(tempFile,"high\n");
     }
 
 
+    
     float topo_all, topo_latest;
     topo_all = (float) hitcount[my_addr()] / (float) bunbo;
     fprintf(stdout, "topo_all:%f (%d/%d)\n", topo_all, hitcount[my_addr()], bunbo);
