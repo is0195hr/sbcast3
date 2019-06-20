@@ -425,7 +425,13 @@ void SBAgent::recv(Packet *p,Handler *h) {
     sender_freq=hitcount[my_addr()];
     static int aaa=0;
     if(aaa==0){
-        fprintf(tempFile,"node,neigh,neicount,bunbo,ave,senderfreq,bunsan,stdhensa,hendoukeisu,max,min,max-min,seiki,force,0-1hantei,ave-hantei,bunsan-hanteo,hendoukeisuu-hantei,seiki+hendoukeisuu\n");
+        fprintf(tempFile,"node,neigh,"
+                         "neicount,bunbo,"
+                         "ave,senderfreq,"
+                         "bunsan,stdhensa,hendoukeisu,"
+                         "max,min,max-min,"
+                         "seiki,force,"
+                         "0-1hantei,ave-hantei,bunsan-hanteo,hendoukeisuu-hantei,seiki+hendoukeisuu\n");
         aaa=1;
     }
     fprintf(tempFile,"%d,%d,",my_addr(),ph->addr());
@@ -468,17 +474,17 @@ void SBAgent::recv(Packet *p,Handler *h) {
     }
     //分散判定
     if(bunsan<=1){
-        fprintf(tempFile,"low,");
+        fprintf(tempFile,"s,");
     }
     else{
-        fprintf(tempFile,"high,");
+        fprintf(tempFile,"d,");
     }
     //変動係数判定
     if(sqrt(bunsan)/neigh_freq<=0.1){
-        fprintf(tempFile,"low,");
+        fprintf(tempFile,"s,");
     }
     else{
-        fprintf(tempFile,"high,");
+        fprintf(tempFile,"d,");
     }
 
     //seiki+変動係数
