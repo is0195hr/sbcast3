@@ -3,7 +3,7 @@
 #include <time.h>
 #include "sbcast_output.h"
 
-#define CODE_NUM 3
+#define CODE_NUM 2
 
 #define BUF 1000
 
@@ -32,9 +32,12 @@
 #define DELAY 1.0
 #define MAX_PACKET 750
 
-#define TRANSTH_TYPE 1
+#define TRANSTH_TYPE 3
 #define UNDER_TH 1
 #define UPPER_TH 1
+
+#define START_TIME 10.0
+#define END_TIME 40.0
 
 FILE * mytraceFile=fopen ("mytrace.tr","wt");
 FILE * codelogFile=fopen ("codelog.tr","wt");
@@ -48,8 +51,8 @@ FILE * resFile=fopen ("res.tr","wt");
 FILE * tpFile=fopen ("tp.tr","wt");
 FILE * tempFile=fopen ("temp.csv","wt");
 FILE * temp2File=fopen ("temp2.csv","wt");
-
 FILE * calcFile=fopen ("calc.tr","wt");
+FILE * hogeFile=fopen ("hoge.tr","wt");
 
 
 // TCL Hooks
@@ -172,6 +175,8 @@ void SBAgent::sendRequest(){
 
 void SBAgent::sendBeacon() {
     static int syokika=0;
+    fprintf(codelogFile,"test\n");
+    fprintf(temp2File,"test\n");
 
     if(syokika==0){//初期化
         for(int i=0;i<BUF;i++){
@@ -290,6 +295,14 @@ void SBAgent::recv(Packet *p,Handler *h) {
     int flag = 0;
 
 
+    fflush(mytraceFile);
+    fflush(codelogFile);
+    fflush(resFile);
+    fflush(recvcodehistoryFile);
+    fflush(recvlogFile);
+
+
+
 
     //全パケット共通動作
     fprintf(stdout, "-----------node:%d rcv Start--------------------------\n", my_addr());
@@ -300,10 +313,10 @@ void SBAgent::recv(Packet *p,Handler *h) {
         return;
     }
     //パケットカウント
-    if(Scheduler::instance().clock()>30 ) {
+    if(Scheduler::instance().clock()>START_TIME ) {
         //packet_count++;
     }
-    if(Scheduler::instance().clock()>65){
+    if(Scheduler::instance().clock()>END_TIME){
         fprintf(resFile,"packet_count:%d\n",packet_count);
 
     }
@@ -488,16 +501,21 @@ void SBAgent::recv(Packet *p,Handler *h) {
     }
 
     //seiki+変動係数
-
+    int judge_res=0;//static=1,dynamic=0;
     if(sqrt(bunsan)/neigh_freq<=0.1){
         fprintf(tempFile,"s\n");
+        judge_res=1;
     }
     else{
         if(sender_freq_seiki>=0.5){
             fprintf(tempFile,"s\n");
+            judge_res=1;
+
         }
         else{
             fprintf(tempFile,"d\n");
+            judge_res=0;
+
         }
     }
 
@@ -735,6 +753,31 @@ void SBAgent::recv(Packet *p,Handler *h) {
             }
         }
     }
+    else if(TRANSTH_TYPE==3){//
+        //隣接ノードの判定総合結果による自分のステータス決定
+        if(mystatus[my_addr()]==STA_CODEWAIT){
+            mystatus[my_addr()]=STA_CODEWAIT;
+        }
+        else if(mystatus[my_addr()]==STA_CODESENDREADY){
+            mystatus[my_addr()]=STA_CODESENDREADY;
+        }
+        else if(neighbor_count<NEIGHBOR_TH){//隣接ノード数が足りない場合強制フラッディング
+            mystatus[my_addr()]=STA_FL;
+            fprintf(mytraceFile,"force floding\n");
+        }
+        else {
+            if(judge_res==0){
+                mystatus[my_addr()]=STA_FL;
+            }
+            else if(judge_res==1){
+                mystatus[my_addr()]=STA_CODEWAIT;
+            }
+            else{
+                fprintf(mytraceFile,"err define my status\n");
+                return;
+            }
+        }
+    }
 
 
     //fprintf(mytraceFile,"TOPO node:%d %d topo:%f\n",my_addr(),mystatus[my_addr()],goukei_topo);
@@ -746,7 +789,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
 			//fprintf(mytraceFile, "Drop\t%f node:%d from:%d type:%d pktNo:%d \n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pkttype_, ph->pktnum_);
 			return;
 		}
-        if(Scheduler::instance().clock()>30 ) {
+        if(Scheduler::instance().clock()>START_TIME ) {
             packet_count++;
         }
 		//受信記録
@@ -769,6 +812,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
                 if(ph->codenum_==2) {
                     if(recvcode1[my_addr()][recvcodecount[my_addr()]] == ph->pkt1_ &&
                        recvcode2[my_addr()][recvcodecount[my_addr()]] == ph->pkt2_){
+                        fprintf(mytraceFile,"drop\n");
                         return;
                     }
 
@@ -779,16 +823,21 @@ void SBAgent::recv(Packet *p,Handler *h) {
                        recvcode3[my_addr()][recvcodecount[my_addr()]] == ph->pkt3_){
                         return;
                     }
-
+                }
+                else{
+                    fprintf(mytraceFile,"err\n");
                 }
                 return;
+            }
+            else{
+                //fprintf(mytraceFile,"err1\n");
             }
         }
 /*		if (recvcodelog[my_addr()][ph->pktnum_] == 1) {
 			fprintf(mytraceFile, "Err \t%f node:%d from:%d type:%d pktNo:%d \n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pkttype_, ph->pktnum_);
 			return;
 		}*/
-        if(Scheduler::instance().clock()>30 ) {
+        if(Scheduler::instance().clock()>START_TIME ) {
             packet_count++;
         }
     	//受信記録
@@ -797,6 +846,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
 		if(ph->codenum_==2) {
 			recvcode1[my_addr()][recvcodecount[my_addr()]] = ph->pkt1_;
 			recvcode2[my_addr()][recvcodecount[my_addr()]] = ph->pkt2_;
+			fprintf(mytraceFile,"recoaded\n");
 
 		}
 		else if(ph->codenum_==3) {
@@ -823,9 +873,13 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
 
         //受信記録ここまで
-
+        fprintf(mytraceFile,"oraora\n");
 		if(my_addr()==1) {
-			fprintf(codelogFile, "%d\t", recvcodecount[my_addr()]);
+		    fprintf(mytraceFile,"oioioi\n");
+            fprintf(temp2File, "aa\t");
+            fprintf(hogeFile,"asada\n");
+            fprintf(codelogFile,"asada\n");
+            fprintf(codelogFile, "%d\t", recvcodecount[my_addr()]);
 			fprintf(codelogFile, "%d\t", recvcodelog[my_addr()][recvcodecount[my_addr()]]);
 			fprintf(codelogFile, "%d\t", recvcodevec[my_addr()][recvcodecount[my_addr()]]);
 			fprintf(codelogFile, "%d\t", recvcode1[my_addr()][recvcodecount[my_addr()]]);
@@ -834,8 +888,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
 			fprintf(codelogFile, "%d\t", recvcode4[my_addr()][recvcodecount[my_addr()]]);
 			fprintf(codelogFile, "%d\t", recvcode5[my_addr()][recvcodecount[my_addr()]]);
 			fprintf(codelogFile, "%d\n", recvcodeFlag[my_addr()][recvcodecount[my_addr()]]);
+            fflush(codelogFile);
 
-		}
+        }
 		if(my_addr()==2) {
 			fprintf(codelogFile2, "%d\t", recvcodecount[my_addr()]);
 			fprintf(codelogFile2, "%d\t", recvcodelog[my_addr()][recvcodecount[my_addr()]]);
@@ -846,7 +901,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
 			fprintf(codelogFile2, "%d\t", recvcode4[my_addr()][recvcodecount[my_addr()]]);
 			fprintf(codelogFile2, "%d\t", recvcode5[my_addr()][recvcodecount[my_addr()]]);
 			fprintf(codelogFile2, "%d\n", recvcodeFlag[my_addr()][recvcodecount[my_addr()]]);
-		}
+            //fflush(codelogFile);
+
+        }
 		//dcwaitの復号チェック
 		if(ph->codenum_==2){
 
@@ -1082,7 +1139,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
 
     //到達率計算
-    if(Scheduler::instance().clock()>60&&my_addr()==17){
+    if(Scheduler::instance().clock()>END_TIME &&my_addr()==17){
         int aru_count = 0;
         for (int i = 121; i <= 240; i++) {
             if (recvlog[my_addr()][i] == 1) {
