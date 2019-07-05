@@ -229,6 +229,8 @@ void SBAgent::sendBeacon() {
         srand((unsigned) time(NULL));
         int seed = rand()%256+1;
         Random::seed(seed);
+
+        //mytraceprint
         fprintf(mytraceFile,"**************************************************\n");
         fprintf(mytraceFile,"%s",ctime(&t));
         fprintf(mytraceFile,"SWITCH_TH:%f ",SWITCH_TH);
@@ -239,9 +241,26 @@ void SBAgent::sendBeacon() {
 		fprintf(mytraceFile,"DELAY:%f\n",DELAY);
         fprintf(mytraceFile,"SEED:%d\n",seed);
         fprintf(mytraceFile,"GALOIS:%d\n",GALOIS);
+        fprintf(mytraceFile,"TRANSTH:%d\n",TRANSTH_TYPE);
         fprintf(mytraceFile,"**************************************************\n");
 
-        fprintf(mytraceFile,"event\ttime\tnode\tfrom\tPKTtype\tPKTno\tcv\ttopo\tstatus\tnei\n");
+        fprintf(mytraceFile,"event\t");
+        fprintf(mytraceFile,"time\t");
+        fprintf(mytraceFile,"node\t");
+        fprintf(mytraceFile,"sender\t");
+        fprintf(mytraceFile,"pkttype_\t");
+        fprintf(mytraceFile,"pktnum_\t");
+        fprintf(mytraceFile,"hop_count_\t");
+        fprintf(mytraceFile,"codevc_\t");
+        fprintf(mytraceFile,"encode_count_\t");
+        fprintf(mytraceFile,"goukei_topo\t");
+        fprintf(mytraceFile,"mystatus\t");
+        fprintf(mytraceFile,"neighbor_count\t");
+        fprintf(mytraceFile,"fl_count\t");
+        fprintf(mytraceFile,"nc_count\t");
+        fprintf(mytraceFile,"include\t");
+        fprintf(mytraceFile,"\n");
+
     }
 	Packet* p = allocpkt();
 	struct hdr_cmn* ch = HDR_CMN(p);
@@ -273,7 +292,25 @@ void SBAgent::sendBeacon() {
 	ih->sport() = RT_PORT;
 	ih->dport() = RT_PORT;
 	ih->ttl() = IP_DEF_TTL;
-	fprintf(mytraceFile, "s\t%f\tnode:%d\tfrom:*\ttype:N\tpktNo:%d\n", Scheduler::instance().clock(), my_addr(),ph->pktnum_);
+	//fprintf(mytraceFile, "s\t%f\tnode:%d\tfrom:*\ttype:N\tpktNo:%d\n", Scheduler::instance().clock(), my_addr(),ph->pktnum_);
+    //mytraceprint
+    fprintf(mytraceFile,"s\t");
+    fprintf(mytraceFile,"%f\t",Scheduler::instance().clock());
+    fprintf(mytraceFile,"%d\t",my_addr());
+    fprintf(mytraceFile,"%d\t",ph->addr());
+    fprintf(mytraceFile,"%d\t",ph->pkttype_);
+    fprintf(mytraceFile,"%d\t",ph->pktnum_);
+    fprintf(mytraceFile,"%d\t",ph->hop_count_);
+    fprintf(mytraceFile,"%d\t",ph->codevc_);
+    fprintf(mytraceFile,"%d\t",ph->encode_count_);
+    //fprintf(mytraceFile,"%f\t",goukei_topo);
+    //fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
+    //fprintf(mytraceFile,"%d\t",neighbor_count);
+    //fprintf(mytraceFile,"%d\t",fl_count);
+    //fprintf(mytraceFile,"%d\t",nc_count);
+    fprintf(mytraceFile,"\t\t\t\t\t");
+    fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+    fprintf(mytraceFile,"\n");
     //ch->uid()=-1;
 	fprintf(stdout,"uid %d\n",ch->uid());
     long int pktid;
@@ -771,7 +808,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
         }
         else if(neighbor_count<NEIGHBOR_TH){//隣接ノード数が足りない場合強制フラッディング
             mystatus[my_addr()]=STA_FL;
-            fprintf(mytraceFile,"force floding\n");
+            //fprintf(mytraceFile,"force floding\n");
         }
         else {
             if(judge_res==0){
@@ -802,7 +839,25 @@ void SBAgent::recv(Packet *p,Handler *h) {
         }
 		//受信記録
 		recvlog[my_addr()][ph->pktnum_] = 1;
-        fprintf(mytraceFile, "r\t%f\tnode:%d\tfrom:%d\ttype:%d\tpktNo:%d\tcv:%d\ttopo:%f\tstatus:%d\tnei:%d\tfl:%d\tnc:%d\n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pkttype_, ph->pktnum_,ph->codevc_,goukei_topo,mystatus[my_addr()],neighbor_count,fl_count,nc_count);
+        //fprintf(mytraceFile, "r\t%f\tnode:%d\tfrom:%d\ttype:%d\tpktNo:%d\tcv:%d\ttopo:%f\tstatus:%d\tnei:%d\tfl:%d\tnc:%d\n",Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pkttype_, ph->pktnum_,ph->codevc_,goukei_topo,mystatus[my_addr()],neighbor_count,fl_count,nc_count);
+
+        //mytraceprint
+        fprintf(mytraceFile,"r\t");
+        fprintf(mytraceFile,"%f\t",Scheduler::instance().clock());
+        fprintf(mytraceFile,"%d\t",my_addr());
+        fprintf(mytraceFile,"%d\t",ph->addr());
+        fprintf(mytraceFile,"%d\t",ph->pkttype_);
+        fprintf(mytraceFile,"%d\t",ph->pktnum_);
+        fprintf(mytraceFile,"%d\t",ph->hop_count_);
+        fprintf(mytraceFile,"%d\t",ph->codevc_);
+        fprintf(mytraceFile,"%d\t",ph->encode_count_);
+        fprintf(mytraceFile,"%f\t",goukei_topo);
+        fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
+        fprintf(mytraceFile,"%d\t",neighbor_count);
+        fprintf(mytraceFile,"%d\t",fl_count);
+        fprintf(mytraceFile,"%d\t",nc_count);
+        fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+        fprintf(mytraceFile,"\n");
 
         if(my_addr()==1){//デバッグ用
             for(int i=1;i<12;i++) {
@@ -874,9 +929,26 @@ void SBAgent::recv(Packet *p,Handler *h) {
 			recvcode4[my_addr()][recvcodecount[my_addr()]] = ph->pkt4_;
 			recvcode5[my_addr()][recvcodecount[my_addr()]] = ph->pkt5_;
 		}
-		fprintf(mytraceFile, "rc\t%f\tnode:%d\tfrom:%d\ttype:%d\tpktNo:%d\tcv:%d\ttopo:%f\tstatus:%d\tnei:%d\tenc_count:%d\t[ %d %d %d %d %d]\n",
-				Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pkttype_, ph->pktnum_,ph->codevc_,goukei_topo,mystatus[my_addr()],neighbor_count,ph->encode_count_,ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+		//fprintf(mytraceFile, "rc\t%f\tnode:%d\tfrom:%d\ttype:%d\tpktNo:%d\tcv:%d\ttopo:%f\tstatus:%d\tnei:%d\tenc_count:%d\t[ %d %d %d %d %d]\n",
+		//		Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pkttype_, ph->pktnum_,ph->codevc_,goukei_topo,mystatus[my_addr()],neighbor_count,ph->encode_count_,ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
 
+        //mytraceprint
+        fprintf(mytraceFile,"rc\t");
+        fprintf(mytraceFile,"%f\t",Scheduler::instance().clock());
+        fprintf(mytraceFile,"%d\t",my_addr());
+        fprintf(mytraceFile,"%d\t",ph->addr());
+        fprintf(mytraceFile,"%d\t",ph->pkttype_);
+        fprintf(mytraceFile,"%d\t",ph->pktnum_);
+        fprintf(mytraceFile,"%d\t",ph->hop_count_);
+        fprintf(mytraceFile,"%d\t",ph->codevc_);
+        fprintf(mytraceFile,"%d\t",ph->encode_count_);
+        fprintf(mytraceFile,"%f\t",goukei_topo);
+        fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
+        fprintf(mytraceFile,"%d\t",neighbor_count);
+        fprintf(mytraceFile,"%d\t",fl_count);
+        fprintf(mytraceFile,"%d\t",nc_count);
+        fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+        fprintf(mytraceFile,"\n");
 
         //受信記録ここまで
         //fprintf(mytraceFile,"oraora\n");
@@ -921,14 +993,65 @@ void SBAgent::recv(Packet *p,Handler *h) {
 			for(int i=0; i<recvcodecount[my_addr()];i++){//符号＋符号
 				if((recvcode1[my_addr()][i]==ph->pkt1_ && recvcode2[my_addr()][i]==ph->pkt2_ && recvcodevec[my_addr()][i]!=ph->codevc_)||
 				   (recvcode1[my_addr()][i]==ph->pkt2_ && recvcode2[my_addr()][i]==ph->pkt1_ && recvcodevec[my_addr()][i]!=ph->codevc_)) {
-					fprintf(mytraceFile, "decodeC\t%f\tnode:%d\tfrom:%d\ttype:%d\tpktNo:%d\tcv:%d\ttopo:%f\tstatus:%d\tnei:%d\t[ %d %d %d %d %d]\n",
-							Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pkttype_, ph->pktnum_,ph->codevc_,goukei_topo,mystatus[my_addr()],neighbor_count,ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
-					recvlog[my_addr()][ph->pkt1_]=1;
+					//fprintf(mytraceFile, "decodeC\t%f\tnode:%d\tfrom:%d\ttype:%d\tpktNo:%d\tcv:%d\ttopo:%f\tstatus:%d\tnei:%d\t[ %d %d %d %d %d]\n",
+					//		Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pkttype_, ph->pktnum_,ph->codevc_,goukei_topo,mystatus[my_addr()],neighbor_count,ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+                    //mytraceprint
+                    fprintf(mytraceFile,"decodeC\t");
+                    fprintf(mytraceFile,"%f\t",Scheduler::instance().clock());
+                    fprintf(mytraceFile,"%d\t",my_addr());
+                    fprintf(mytraceFile,"%d\t",ph->addr());
+                    fprintf(mytraceFile,"%d\t",ph->pkttype_);
+                    fprintf(mytraceFile,"%d\t",ph->pktnum_);
+                    fprintf(mytraceFile,"%d\t",ph->hop_count_);
+                    fprintf(mytraceFile,"%d\t",ph->codevc_);
+                    fprintf(mytraceFile,"%d\t",ph->encode_count_);
+                    fprintf(mytraceFile,"%f\t",goukei_topo);
+                    fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
+                    fprintf(mytraceFile,"%d\t",neighbor_count);
+                    fprintf(mytraceFile,"%d\t",fl_count);
+                    fprintf(mytraceFile,"%d\t",nc_count);
+                    fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+                    fprintf(mytraceFile,"\n");
+                    recvlog[my_addr()][ph->pkt1_]=1;
 					recvlog[my_addr()][ph->pkt2_]=1;
-					fprintf(mytraceFile, "g\t%f\tnode:%d\tfrom:%d\ttype:N\tpktNo:%d\tcv:%d\ttopo:%f\tstatus:%d\tnei:%d\t[ %d %d %d %d %d]\n",
-							Scheduler::instance().clock(), my_addr(),ph->addr(), ph->pkt1_,ph->codevc_,goukei_topo,mystatus[my_addr()],neighbor_count,ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
-					fprintf(mytraceFile, "g\t%f\tnode:%d\tfrom:%d\ttype:N\tpktNo:%d\tcv:%d\ttopo:%f\tstatus:%d\tnei:%d\t[ %d %d %d %d %d]\n",
-							Scheduler::instance().clock(), my_addr(),ph->addr(), ph->pkt2_,ph->codevc_,goukei_topo,mystatus[my_addr()],neighbor_count,ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+                    //mytraceprint
+                    fprintf(mytraceFile,"g\t");
+                    fprintf(mytraceFile,"%f\t",Scheduler::instance().clock());
+                    fprintf(mytraceFile,"%d\t",my_addr());
+                    fprintf(mytraceFile,"%d\t",ph->addr());
+                    fprintf(mytraceFile,"%d\t",ph->pkttype_);
+                    fprintf(mytraceFile,"%d\t",ph->pkt1_);
+                    fprintf(mytraceFile,"%d\t",ph->hop_count_);
+                    fprintf(mytraceFile,"%d\t",ph->codevc_);
+                    fprintf(mytraceFile,"%d\t",ph->encode_count_);
+                    fprintf(mytraceFile,"%f\t",goukei_topo);
+                    fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
+                    fprintf(mytraceFile,"%d\t",neighbor_count);
+                    fprintf(mytraceFile,"%d\t",fl_count);
+                    fprintf(mytraceFile,"%d\t",nc_count);
+                    fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+                    fprintf(mytraceFile,"\n");
+                    //mytraceprint
+                    fprintf(mytraceFile,"g\t");
+                    fprintf(mytraceFile,"%f\t",Scheduler::instance().clock());
+                    fprintf(mytraceFile,"%d\t",my_addr());
+                    fprintf(mytraceFile,"%d\t",ph->addr());
+                    fprintf(mytraceFile,"%d\t",ph->pkttype_);
+                    fprintf(mytraceFile,"%d\t",ph->pkt2_);
+                    fprintf(mytraceFile,"%d\t",ph->hop_count_);
+                    fprintf(mytraceFile,"%d\t",ph->codevc_);
+                    fprintf(mytraceFile,"%d\t",ph->encode_count_);
+                    fprintf(mytraceFile,"%f\t",goukei_topo);
+                    fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
+                    fprintf(mytraceFile,"%d\t",neighbor_count);
+                    fprintf(mytraceFile,"%d\t",fl_count);
+                    fprintf(mytraceFile,"%d\t",nc_count);
+                    fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+                    fprintf(mytraceFile,"\n");
+					//fprintf(mytraceFile, "g\t%f\tnode:%d\tfrom:%d\ttype:N\tpktNo:%d\tcv:%d\ttopo:%f\tstatus:%d\tnei:%d\t[ %d %d %d %d %d]\n",
+					//		Scheduler::instance().clock(), my_addr(),ph->addr(), ph->pkt1_,ph->codevc_,goukei_topo,mystatus[my_addr()],neighbor_count,ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+					//fprintf(mytraceFile, "g\t%f\tnode:%d\tfrom:%d\ttype:N\tpktNo:%d\tcv:%d\ttopo:%f\tstatus:%d\tnei:%d\t[ %d %d %d %d %d]\n",
+					//		Scheduler::instance().clock(), my_addr(),ph->addr(), ph->pkt2_,ph->codevc_,goukei_topo,mystatus[my_addr()],neighbor_count,ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
 
 					recvcodeFlag[my_addr()][recvcodecount[my_addr()]]=1;
 					flag=1;
@@ -944,22 +1067,89 @@ void SBAgent::recv(Packet *p,Handler *h) {
 				}
 			}
 			if(flag!=1&&(recvlog[my_addr()][ph->pkt1_]==1 || recvlog[my_addr()][ph->pkt2_]==1)){//通常＋符号
-				fprintf(mytraceFile, "decodeN\t%f\tnode:%d\tfrom:%d\ttype:%d\tpktNo:%d\tcv:%d\ttopo:%f\tstatus:%d\tnei:%d\t[ %d %d %d %d %d]\n",
-						Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pkttype_, ph->pktnum_,ph->codevc_,goukei_topo,mystatus[my_addr()],neighbor_count,ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+                //mytraceprint
+                fprintf(mytraceFile,"decodeN\t");
+                fprintf(mytraceFile,"%f\t",Scheduler::instance().clock());
+                fprintf(mytraceFile,"%d\t",my_addr());
+                fprintf(mytraceFile,"%d\t",ph->addr());
+                fprintf(mytraceFile,"%d\t",ph->pkttype_);
+                fprintf(mytraceFile,"%d\t",ph->pktnum_);
+                fprintf(mytraceFile,"%d\t",ph->hop_count_);
+                fprintf(mytraceFile,"%d\t",ph->codevc_);
+                fprintf(mytraceFile,"%d\t",ph->encode_count_);
+                fprintf(mytraceFile,"%f\t",goukei_topo);
+                fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
+                fprintf(mytraceFile,"%d\t",neighbor_count);
+                fprintf(mytraceFile,"%d\t",fl_count);
+                fprintf(mytraceFile,"%d\t",nc_count);
+                fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+                fprintf(mytraceFile,"\n");
+				//fprintf(mytraceFile, "decodeN\t%f\tnode:%d\tfrom:%d\ttype:%d\tpktNo:%d\tcv:%d\ttopo:%f\tstatus:%d\tnei:%d\t[ %d %d %d %d %d]\n",
+				//		Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pkttype_, ph->pktnum_,ph->codevc_,goukei_topo,mystatus[my_addr()],neighbor_count,ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
 				recvlog[my_addr()][ph->pkt1_]=1;
 				recvlog[my_addr()][ph->pkt2_]=1;
-				fprintf(mytraceFile, "g\t%f\tnode:%d\tfrom:%d\ttype:N\tpktNo:%d\tcv:%d\ttopo:%f\tstatus:%d\tnei:%d\t[ %d %d %d %d %d]\n",
-						Scheduler::instance().clock(), my_addr(),ph->addr(), ph->pkt1_,ph->codevc_,goukei_topo,mystatus[my_addr()],neighbor_count,ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
-				fprintf(mytraceFile, "g\t%f\tnode:%d\tfrom:%d\ttype:N\tpktNo:%d\tcv:%d\ttopo:%f\tstatus:%d\tnei:%d\t[ %d %d %d %d %d]\n",
-						Scheduler::instance().clock(), my_addr(),ph->addr(), ph->pkt2_,ph->codevc_,goukei_topo,mystatus[my_addr()],neighbor_count,ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
-
+				//fprintf(mytraceFile, "g\t%f\tnode:%d\tfrom:%d\ttype:N\tpktNo:%d\tcv:%d\ttopo:%f\tstatus:%d\tnei:%d\t[ %d %d %d %d %d]\n",
+				//		Scheduler::instance().clock(), my_addr(),ph->addr(), ph->pkt1_,ph->codevc_,goukei_topo,mystatus[my_addr()],neighbor_count,ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+				//fprintf(mytraceFile, "g\t%f\tnode:%d\tfrom:%d\ttype:N\tpktNo:%d\tcv:%d\ttopo:%f\tstatus:%d\tnei:%d\t[ %d %d %d %d %d]\n",
+				//		Scheduler::instance().clock(), my_addr(),ph->addr(), ph->pkt2_,ph->codevc_,goukei_topo,mystatus[my_addr()],neighbor_count,ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+                //mytraceprint
+                fprintf(mytraceFile,"g\t");
+                fprintf(mytraceFile,"%f\t",Scheduler::instance().clock());
+                fprintf(mytraceFile,"%d\t",my_addr());
+                fprintf(mytraceFile,"%d\t",ph->addr());
+                fprintf(mytraceFile,"%d\t",ph->pkttype_);
+                fprintf(mytraceFile,"%d\t",ph->pkt1_);
+                fprintf(mytraceFile,"%d\t",ph->hop_count_);
+                fprintf(mytraceFile,"%d\t",ph->codevc_);
+                fprintf(mytraceFile,"%d\t",ph->encode_count_);
+                fprintf(mytraceFile,"%f\t",goukei_topo);
+                fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
+                fprintf(mytraceFile,"%d\t",neighbor_count);
+                fprintf(mytraceFile,"%d\t",fl_count);
+                fprintf(mytraceFile,"%d\t",nc_count);
+                fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+                fprintf(mytraceFile,"\n");
+                //mytraceprint
+                fprintf(mytraceFile,"g\t");
+                fprintf(mytraceFile,"%f\t",Scheduler::instance().clock());
+                fprintf(mytraceFile,"%d\t",my_addr());
+                fprintf(mytraceFile,"%d\t",ph->addr());
+                fprintf(mytraceFile,"%d\t",ph->pkttype_);
+                fprintf(mytraceFile,"%d\t",ph->pkt2_);
+                fprintf(mytraceFile,"%d\t",ph->hop_count_);
+                fprintf(mytraceFile,"%d\t",ph->codevc_);
+                fprintf(mytraceFile,"%d\t",ph->encode_count_);
+                fprintf(mytraceFile,"%f\t",goukei_topo);
+                fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
+                fprintf(mytraceFile,"%d\t",neighbor_count);
+                fprintf(mytraceFile,"%d\t",fl_count);
+                fprintf(mytraceFile,"%d\t",nc_count);
+                fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+                fprintf(mytraceFile,"\n");
 				recvcodeFlag[my_addr()][recvcodecount[my_addr()]]=1;
 				flag=1;
 			}
 			if(flag==0){//復号できない場合
-				fprintf(mytraceFile, "failDC\t%f\tnode:%d\tfrom:%d\ttype:%d\tpktNo:%d\tcv:%d\ttopo:%f\tstatus:%d\tnei:%d\t[ %d %d %d %d %d]\n",
-						Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pkttype_, ph->pktnum_,ph->codevc_,goukei_topo,mystatus[my_addr()],neighbor_count,ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
-				dcwait1[my_addr()][decodequeuecount[my_addr()]]=ph->pkt1_;
+				//fprintf(mytraceFile, "failDC\t%f\tnode:%d\tfrom:%d\ttype:%d\tpktNo:%d\tcv:%d\ttopo:%f\tstatus:%d\tnei:%d\t[ %d %d %d %d %d]\n",
+				//		Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pkttype_, ph->pktnum_,ph->codevc_,goukei_topo,mystatus[my_addr()],neighbor_count,ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+                //mytraceprint
+                fprintf(mytraceFile,"failDC\t");
+                fprintf(mytraceFile,"%f\t",Scheduler::instance().clock());
+                fprintf(mytraceFile,"%d\t",my_addr());
+                fprintf(mytraceFile,"%d\t",ph->addr());
+                fprintf(mytraceFile,"%d\t",ph->pkttype_);
+                fprintf(mytraceFile,"%d\t",ph->pktnum_);
+                fprintf(mytraceFile,"%d\t",ph->hop_count_);
+                fprintf(mytraceFile,"%d\t",ph->codevc_);
+                fprintf(mytraceFile,"%d\t",ph->encode_count_);
+                fprintf(mytraceFile,"%f\t",goukei_topo);
+                fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
+                fprintf(mytraceFile,"%d\t",neighbor_count);
+                fprintf(mytraceFile,"%d\t",fl_count);
+                fprintf(mytraceFile,"%d\t",nc_count);
+                fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+                fprintf(mytraceFile,"\n");
+                dcwait1[my_addr()][decodequeuecount[my_addr()]]=ph->pkt1_;
 				dcwait2[my_addr()][decodequeuecount[my_addr()]]=ph->pkt2_;
 				dcwaitvec[my_addr()][decodequeuecount[my_addr()]]=ph->codevc_;
 				decodequeuecount[my_addr()]++;
@@ -1169,8 +1359,25 @@ void SBAgent::recv(Packet *p,Handler *h) {
 	else if(ph->pkttype_==PKT_CODED){
 	    if(flag == 1){//符号パケットを受信して復号に成功した場合
 	        if(CODE_NUM == 2){
-                fprintf(mytraceFile, "fc\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pktnum_,ph->codevc_);
-                fprintf(stdout,"おはよう\n");
+                //fprintf(mytraceFile, "fc\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pktnum_,ph->codevc_);
+                //mytraceprint
+                fprintf(mytraceFile,"fc\t");
+                fprintf(mytraceFile,"%f\t",Scheduler::instance().clock());
+                fprintf(mytraceFile,"%d\t",my_addr());
+                fprintf(mytraceFile,"%d\t",ph->addr());
+                fprintf(mytraceFile,"%d\t",ph->pkttype_);
+                fprintf(mytraceFile,"%d\t",ph->pktnum_);
+                fprintf(mytraceFile,"%d\t",ph->hop_count_);
+                fprintf(mytraceFile,"%d\t",ph->codevc_);
+                fprintf(mytraceFile,"%d\t",ph->encode_count_);
+                //fprintf(mytraceFile,"%f\t",goukei_topo);
+                //fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
+                //fprintf(mytraceFile,"%d\t",neighbor_count);
+                //fprintf(mytraceFile,"%d\t",fl_count);
+                //fprintf(mytraceFile,"%d\t",nc_count);
+                fprintf(mytraceFile,"\t\t\t\t\t");
+                fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+                fprintf(mytraceFile,"\n");
                 ph->addr() = my_addr();
                 ph->pkttype_ = PKT_CODED;
                 ch->next_hop() = IP_BROADCAST;
@@ -1270,8 +1477,24 @@ void SBAgent::recv(Packet *p,Handler *h) {
 			ch->next_hop() = IP_BROADCAST;
 			ch->addr_type() = NS_AF_NONE;
 			ch->direction() = hdr_cmn::DOWN;
-            fprintf(mytraceFile, "f\t%f\tnode:%d\tfrom:%d\ttype:%d\tpktNo:%d\n", Scheduler::instance().clock(), my_addr(),tempaddr,ph->pkttype_ ,ph->pktnum_);
-
+            //fprintf(mytraceFile, "f\t%f\tnode:%d\tfrom:%d\ttype:%d\tpktNo:%d\n", Scheduler::instance().clock(), my_addr(),tempaddr,ph->pkttype_ ,ph->pktnum_);
+            //mytraceprint
+            fprintf(mytraceFile,"f\t");
+            fprintf(mytraceFile,"%f\t",Scheduler::instance().clock());
+            fprintf(mytraceFile,"%d\t",my_addr());
+            fprintf(mytraceFile,"%d\t",ph->addr());
+            fprintf(mytraceFile,"%d\t",ph->pkttype_);
+            fprintf(mytraceFile,"%d\t",ph->pktnum_);
+            fprintf(mytraceFile,"%d\t",ph->hop_count_);
+            fprintf(mytraceFile,"%d\t",ph->codevc_);
+            fprintf(mytraceFile,"%d\t",ph->encode_count_);
+            fprintf(mytraceFile,"%f\t",goukei_topo);
+            fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
+            fprintf(mytraceFile,"%d\t",neighbor_count);
+            fprintf(mytraceFile,"%d\t",fl_count);
+            fprintf(mytraceFile,"%d\t",nc_count);
+            fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+            fprintf(mytraceFile,"\n");
             //即時送信
             send(p,0);
             //遅延送信
@@ -1280,8 +1503,25 @@ void SBAgent::recv(Packet *p,Handler *h) {
 		} else if (mystatus[my_addr()] == STA_CODEWAIT) {//符号パケット収集
 			collectlist[my_addr()][collectNum[my_addr()]] = ph->pktnum_;
 			collectNum[my_addr()]++;
-			fprintf(mytraceFile, "col1\t%f\tnode:%d\tfrom:%d\ttype:%d\tpktNo:%d \n", Scheduler::instance().clock(),
-					my_addr(), ph->addr(), ph->pkttype_, ph->pktnum_);
+			//fprintf(mytraceFile, "col1\t%f\tnode:%d\tfrom:%d\ttype:%d\tpktNo:%d \n", Scheduler::instance().clock(),
+			//		my_addr(), ph->addr(), ph->pkttype_, ph->pktnum_);
+            //mytraceprint
+            fprintf(mytraceFile,"col1\t");
+            fprintf(mytraceFile,"%f\t",Scheduler::instance().clock());
+            fprintf(mytraceFile,"%d\t",my_addr());
+            fprintf(mytraceFile,"%d\t",ph->addr());
+            fprintf(mytraceFile,"%d\t",ph->pkttype_);
+            fprintf(mytraceFile,"%d\t",ph->pktnum_);
+            fprintf(mytraceFile,"%d\t",ph->hop_count_);
+            fprintf(mytraceFile,"%d\t",ph->codevc_);
+            fprintf(mytraceFile,"%d\t",ph->encode_count_);
+            fprintf(mytraceFile,"%f\t",goukei_topo);
+            fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
+            fprintf(mytraceFile,"%d\t",neighbor_count);
+            fprintf(mytraceFile,"%d\t",fl_count);
+            fprintf(mytraceFile,"%d\t",nc_count);
+            fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+            fprintf(mytraceFile,"\n");
 			if(collectNum[my_addr()]+1==CODE_NUM) {//あとひとつあつまれば送信できるとき
 				mystatus[my_addr()] = STA_CODESENDREADY;
 			}
@@ -1290,9 +1530,25 @@ void SBAgent::recv(Packet *p,Handler *h) {
 		} else if (mystatus[my_addr()] == STA_CODESENDREADY) {//収集完了から送信
 			collectlist[my_addr()][collectNum[my_addr()]] = ph->pktnum_;
 			collectNum[my_addr()]++;
-			fprintf(mytraceFile, "col2\t%f\tnode:%d\tfrom:%d\ttype:%d\tpktNo:%d \n", Scheduler::instance().clock(),
-					my_addr(), ph->addr(), ph->pkttype_, ph->pktnum_);
-
+			//fprintf(mytraceFile, "col2\t%f\tnode:%d\tfrom:%d\ttype:%d\tpktNo:%d \n", Scheduler::instance().clock(),
+			//		my_addr(), ph->addr(), ph->pkttype_, ph->pktnum_);
+            //mytraceprint
+            fprintf(mytraceFile,"col2\t");
+            fprintf(mytraceFile,"%f\t",Scheduler::instance().clock());
+            fprintf(mytraceFile,"%d\t",my_addr());
+            fprintf(mytraceFile,"%d\t",ph->addr());
+            fprintf(mytraceFile,"%d\t",ph->pkttype_);
+            fprintf(mytraceFile,"%d\t",ph->pktnum_);
+            fprintf(mytraceFile,"%d\t",ph->hop_count_);
+            fprintf(mytraceFile,"%d\t",ph->codevc_);
+            fprintf(mytraceFile,"%d\t",ph->encode_count_);
+            fprintf(mytraceFile,"%f\t",goukei_topo);
+            fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
+            fprintf(mytraceFile,"%d\t",neighbor_count);
+            fprintf(mytraceFile,"%d\t",fl_count);
+            fprintf(mytraceFile,"%d\t",nc_count);
+            fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+            fprintf(mytraceFile,"\n");
 
 			if (collectNum[my_addr()] == CODE_NUM) {
 			    //並べ替え処理
@@ -1401,8 +1657,26 @@ int SBAgent::createCodepacket2(int pkt_1, int pkt_2, int encode_count){
 
     fprintf(createcodeFile,"node:%d\t%f\tpktNo:%d\tvc:%d\t%d\t%d\t%d\t%d\t%d\n",my_addr(),Scheduler::instance().clock(),ph->pktnum_,ph->codevc_,ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
 
-	fprintf(mytraceFile, "sc\t%f\tnode:%d\tfrom:%d\ttype:%d\tpktNo:%d\tcv:%d\ttopo:NaN\tstatus:%d\tnei:NaN\t[ %d %d %d %d %d]\n",
-			Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pkttype_, ph->pktnum_,ph->codevc_,mystatus[my_addr()],ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+	//fprintf(mytraceFile, "sc\t%f\tnode:%d\tfrom:%d\ttype:%d\tpktNo:%d\tcv:%d\ttopo:NaN\tstatus:%d\tnei:NaN\t[ %d %d %d %d %d]\n",
+	//		Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pkttype_, ph->pktnum_,ph->codevc_,mystatus[my_addr()],ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+    //mytraceprint
+    fprintf(mytraceFile,"sc\t");
+    fprintf(mytraceFile,"%f\t",Scheduler::instance().clock());
+    fprintf(mytraceFile,"%d\t",my_addr());
+    fprintf(mytraceFile,"%d\t",ph->addr());
+    fprintf(mytraceFile,"%d\t",ph->pkttype_);
+    fprintf(mytraceFile,"%d\t",ph->pktnum_);
+    fprintf(mytraceFile,"%d\t",ph->hop_count_);
+    fprintf(mytraceFile,"%d\t",ph->codevc_);
+    fprintf(mytraceFile,"%d\t",ph->encode_count_);
+    //fprintf(mytraceFile,"%f\t",goukei_topo);
+    //fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
+    //fprintf(mytraceFile,"%d\t",neighbor_count);
+    //fprintf(mytraceFile,"%d\t",fl_count);
+    //fprintf(mytraceFile,"%d\t",nc_count);
+    fprintf(mytraceFile,"\t\t\t\t\t");
+    fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+    fprintf(mytraceFile,"\n");
     //即時送信
     send(p,0);
     //遅延送信
