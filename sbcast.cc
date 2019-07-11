@@ -39,7 +39,7 @@
 #define START_TIME 10.0
 #define END_TIME 40.0
 
-#define MCAST_MEMBER_1 8
+#define MCAST_MEMBER_1 17
 #define MCAST_MEMBER_2 9
 #define MCAST_MEMBER_3 10
 #define MCAST_MEMBER_4 11
@@ -144,7 +144,20 @@ static int recvcode3[BUF][BUF];
 static int recvcode4[BUF][BUF];
 static int recvcode5[BUF][BUF];
 static int recvcodeFlag[BUF][BUF];
-static int sendcodelog[BUF][BUF];
+
+
+struct sendcodeinfo{
+    int pktnumb;
+    int pkt1;
+    int pkt2;
+    int pkt3;
+    int pkt4;
+    int pkt5;
+    int codevec;
+};
+
+static sendcodeinfo sendcodelog[BUF][BUF];
+static int sendcodecount[BUF];
 
 
 static int mystatus[BUF];
@@ -207,7 +220,15 @@ void SBAgent::sendBeacon() {
 				dcwait4[i][j]=-1;
 				dcwait5[i][j]=-1;
 				dcwaitvec[i][j]=-1;
-                sendcodelog[i][j]=-1;
+                sendcodelog[i][j].codevec=-1;
+                sendcodelog[i][j].pkt1=-1;
+                sendcodelog[i][j].pkt2=-1;
+                sendcodelog[i][j].pkt3=-1;
+                sendcodelog[i][j].pkt4=-1;
+                sendcodelog[i][j].pkt5=-1;
+                sendcodelog[i][j].pktnumb=-1;
+
+
             }
             mystatus[i]=0;
             collectNum[i]=0;
@@ -216,6 +237,7 @@ void SBAgent::sendBeacon() {
             topo[i]=0;
             hitcount[i]=0;
             decodequeuecount[i]=0;
+            sendcodecount[i]=-1;
         }
         syokika=1;
         all_rcv_ccount=0;
@@ -281,7 +303,7 @@ void SBAgent::sendBeacon() {
 	ph->pkt4_=-1;
 	ph->pkt5_=-1;
 	ph->hop_count_=1;
-	ph->encode_count_=-1;
+	ph->encode_count_=0;
 
 	ch->direction() = hdr_cmn::DOWN;
 	ch->size() = IP_HDR_LEN;
@@ -1354,7 +1376,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
 
     //到達率計算
-    if(/*Scheduler::instance().clock()>END_TIME && */my_addr()==MCAST_MEMBER_1 || my_addr()==MCAST_MEMBER_2 || my_addr()==MCAST_MEMBER_3 || my_addr()==MCAST_MEMBER_4 || my_addr()==MCAST_MEMBER_5){
+    if(/*Scheduler::instance().clock()>END_TIME && */my_addr()==MCAST_MEMBER_1 /*|| my_addr()==MCAST_MEMBER_2 || my_addr()==MCAST_MEMBER_3 || my_addr()==MCAST_MEMBER_4 || my_addr()==MCAST_MEMBER_5*/){
         int aru_count = 0;
         for (int i = 41; i <= 160; i++) {
             if (recvlog[my_addr()][i] == 1) {
@@ -1431,21 +1453,31 @@ void SBAgent::recv(Packet *p,Handler *h) {
                 collectNum[my_addr()] = 0;
             }*/
            //fprintf(mytraceFile,"%d < %d\n",ph->encode_count_,CODE_NUM);
-           //これでいけるか？
 
-            if(ph->encode_count_<CODE_NUM+1) {
+            //同じ中身の確認
+            int codesendeflag=0;
+            if(CODE_NUM==2) {
+                for (int i = 0; i < sendcodecount[my_addr()]; i++) {
+                    if (sendcodelog[my_addr()][i].pkt1 == ph->pkt1_ && sendcodelog[my_addr()][i].pkt2 == ph->pkt2_){
+                        codesendeflag=1;
+                    }
+                }
+            }
+           //これでいけるか？
+            //if(ph->encode_count_<CODE_NUM) {
+            if(codesendeflag==0){
                 if (CODE_NUM == 2) {
                     createCodepacket2(ph->pkt1_, ph->pkt2_, ph->encode_count_);
                     mystatus[my_addr()] = STA_FL;
                     collectNum[my_addr()] = 0;
-                    fprintf(mytraceFile, "fc\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pktnum_,ph->codevc_);
+                    //fprintf(mytraceFile, "fc\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pktnum_,ph->codevc_);
 
 
                 } else if (CODE_NUM == 3) {
                     createCodepacket3(ph->pkt1_, ph->pkt2_, ph->pkt3_, ph->encode_count_);
                     mystatus[my_addr()] = STA_FL;
                     collectNum[my_addr()] = 0;
-                    fprintf(mytraceFile, "rec\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pktnum_,ph->codevc_);
+                    //fprintf(mytraceFile, "rec\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pktnum_,ph->codevc_);
                 }
 
             }
@@ -1455,9 +1487,6 @@ void SBAgent::recv(Packet *p,Handler *h) {
             }
             return;
 
-            if(ph->addr()==my_addr()){
-                fprintf(mytraceFile,"same\n");
-            }
             //とりあえず中継のみ
             /*
             fprintf(mytraceFile, "fc\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pktnum_,ph->codevc_);
@@ -1710,6 +1739,11 @@ int SBAgent::createCodepacket2(int pkt_1, int pkt_2, int encode_count){
     send(p,0);
     //遅延送信
     //Scheduler::instance().schedule(target_,p,0.01 * Random::uniform());
+    sendcodelog[my_addr()][sendcodecount[my_addr()]].pkt1=ph->pkt1_;
+    sendcodelog[my_addr()][sendcodecount[my_addr()]].pkt2=ph->pkt2_;
+    sendcodelog[my_addr()][sendcodecount[my_addr()]].codevec=ph->codevc_;
+    sendcodelog[my_addr()][sendcodecount[my_addr()]].pktnumb=ph->pktnum_;
+    sendcodecount[my_addr()]++;
 	codepktnum++;
 }
 int SBAgent::createCodepacket3(int pkt_1, int pkt_2 , int pkt_3, int encode_count) {
