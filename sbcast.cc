@@ -555,7 +555,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
         judge_res=1;//teian=1
     }
     else{
-        if(sender_freq_seiki>=0.25){
+        if(sender_freq_seiki>=0.5){
             fprintf(tempFile,"s\n");
             judge_res=1;//teian=1
 
@@ -1382,7 +1382,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
 	        if(CODE_NUM == 2){
                 //fprintf(mytraceFile, "fc\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pktnum_,ph->codevc_);
                 //mytraceprint
-                fprintf(mytraceFile,"fc\t");
+               /*fprintf(mytraceFile,"fc\t");
                 fprintf(mytraceFile,"%f\t",Scheduler::instance().clock());
                 fprintf(mytraceFile,"%d\t",my_addr());
                 fprintf(mytraceFile,"%d\t",ph->addr());
@@ -1408,7 +1408,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
                 ch->direction() = hdr_cmn::DOWN;
 
                 send(p,0);
-                return;
+                return;*/
 	        }
 
 
@@ -1430,10 +1430,10 @@ void SBAgent::recv(Packet *p,Handler *h) {
                 mystatus[my_addr()] = STA_FL;
                 collectNum[my_addr()] = 0;
             }*/
-           fprintf(mytraceFile,"%d < %d\n",ph->encode_count_,CODE_NUM);
+           //fprintf(mytraceFile,"%d < %d\n",ph->encode_count_,CODE_NUM);
            //これでいけるか？
-            /*
-            if(ph->encode_count_<CODE_NUM) {
+
+            if(ph->encode_count_<CODE_NUM+1) {
                 if (CODE_NUM == 2) {
                     createCodepacket2(ph->pkt1_, ph->pkt2_, ph->encode_count_);
                     mystatus[my_addr()] = STA_FL;
@@ -1454,7 +1454,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
                 return;
             }
             return;
-        */
+
             if(ph->addr()==my_addr()){
                 fprintf(mytraceFile,"same\n");
             }
