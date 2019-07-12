@@ -39,7 +39,7 @@
 #define START_TIME 10.0
 #define END_TIME 40.0
 
-#define MCAST_MEMBER_1 17
+#define MCAST_MEMBER_1 15
 #define MCAST_MEMBER_2 9
 #define MCAST_MEMBER_3 10
 #define MCAST_MEMBER_4 11
@@ -185,7 +185,8 @@ static int all_send_ncount;
 static int all_send_ccount;
 //static int ref[];
 
-static int packet_count;
+static int rcv_packet_count;
+static int send_packet_count;
 
 //int SBAgent::createCodepacket2(int,int);
 void SBAgent::sendRequest(){
@@ -244,7 +245,8 @@ void SBAgent::sendBeacon() {
         all_rcv_ncount=0;
         all_send_ccount=0;
         all_send_ncount=0;
-        packet_count=0;
+        rcv_packet_count=0;
+        send_packet_count=0;
         //int a=test(1, 2);
         //fprintf(mytraceFile,"test:%d\n",a);
         time_t t = time(NULL);
@@ -347,6 +349,7 @@ void SBAgent::sendBeacon() {
     }
     //即時送信
 	send(p,0);
+    send_packet_count++;
     //test2('s',my_addr());
     //遅延送信
     //Scheduler::instance().schedule(target_,p,DELAY * Random::uniform());
@@ -384,7 +387,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
         //packet_count++;
     }
     if(Scheduler::instance().clock()>END_TIME){
-        fprintf(resFile,"packet_count:%d\n",packet_count);
+        fprintf(resFile,"packet_count:%d %d\n",rcv_packet_count,send_packet_count);
 
     }
 
@@ -860,7 +863,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
 			return;
 		}
         if(Scheduler::instance().clock()>START_TIME && Scheduler::instance().clock()<=END_TIME) {
-            packet_count++;
+            rcv_packet_count++;
         }
 		//受信記録
 		recvlog[my_addr()][ph->pktnum_] = 1;
@@ -900,8 +903,10 @@ void SBAgent::recv(Packet *p,Handler *h) {
         for(int i=0;i<BUF;i++){
             if(recvcodelog[my_addr()][i]==ph->pktnum_){
                 if(ph->codenum_==2) {
-                    if(recvcode1[my_addr()][recvcodecount[my_addr()]] == ph->pkt1_ &&
-                       recvcode2[my_addr()][recvcodecount[my_addr()]] == ph->pkt2_){
+                   // if(recvcode1[my_addr()][recvcodecount[my_addr()]] == ph->pkt1_ &&
+                     //  recvcode2[my_addr()][recvcodecount[my_addr()]] == ph->pkt2_){
+                        if(recvcode1[my_addr()][i] == ph->pkt1_ &&
+                           recvcode2[my_addr()][i] == ph->pkt2_){
                         fprintf(mytraceFile,"drop\n");
                         return;
                     }
@@ -927,7 +932,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
 			return;
 		}*/
         if(Scheduler::instance().clock()>START_TIME && Scheduler::instance().clock()<=END_TIME) {
-            packet_count++;
+            rcv_packet_count++;
         }
     	//受信記録
 		recvcodelog[my_addr()][recvcodecount[my_addr()]] = ph->pktnum_;
@@ -1090,7 +1095,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
 					recvcodeFlag[my_addr()][recvcodecount[my_addr()]]=1;
 					flag=1;
-
+                    break;
 					/*ph->addr() = my_addr();
 					ph->pkttype_ = PKT_CODED;
 					ch->next_hop() = IP_BROADCAST;
@@ -1388,6 +1393,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
         for(int i=41;i<=160;i++){
             fprintf(resFile,"%d",recvlog[my_addr()][i]);
+            if(i%10==0){
+                fprintf(resFile," ");
+            }
         }
         fprintf(resFile,"\n");
     }
@@ -1460,6 +1468,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
                 for (int i = 0; i < sendcodecount[my_addr()]; i++) {
                     if (sendcodelog[my_addr()][i].pkt1 == ph->pkt1_ && sendcodelog[my_addr()][i].pkt2 == ph->pkt2_){
                         codesendeflag=1;
+
                     }
                 }
             }
@@ -1551,6 +1560,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
             fprintf(mytraceFile,"\n");
             //即時送信
             send(p,0);
+            send_packet_count++;
             //遅延送信
             //Scheduler::instance().schedule(target_,p,0.01 * Random::uniform());
 			return;
@@ -1668,6 +1678,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
             //即時送信
             send(p,0);
+            send_packet_count++;
             //遅延送信
             //Scheduler::instance().schedule(target_,p,0.01 * Random::uniform());
 		}
@@ -1737,6 +1748,7 @@ int SBAgent::createCodepacket2(int pkt_1, int pkt_2, int encode_count){
     fprintf(mytraceFile,"\n");
     //即時送信
     send(p,0);
+    send_packet_count++;
     //遅延送信
     //Scheduler::instance().schedule(target_,p,0.01 * Random::uniform());
     sendcodelog[my_addr()][sendcodecount[my_addr()]].pkt1=ph->pkt1_;
@@ -1787,6 +1799,7 @@ int SBAgent::createCodepacket3(int pkt_1, int pkt_2 , int pkt_3, int encode_coun
     fprintf(mytraceFile, "sc\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\tencode:%d\n", Scheduler::instance().clock(), my_addr(),my_addr(),ph->pktnum_,ph->codevc_,encode_count);
     //即時送信
     send(p,0);
+    send_packet_count++;
     //遅延送信
     //Scheduler::instance().schedule(target_,p,0.01 * Random::uniform());
 	codepktnum++;
@@ -1833,6 +1846,7 @@ int SBAgent::createCodepacket4(int pkt_1, int pkt_2 , int pkt_3, int pkt_4, int 
     fprintf(mytraceFile, "sc\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\n", Scheduler::instance().clock(), my_addr(),my_addr(),ph->pktnum_,ph->codevc_);
     //即時送信
     send(p,0);
+    send_packet_count++;
     //遅延送信
     //Scheduler::instance().schedule(target_,p,0.01 * Random::uniform());
 }
@@ -1877,6 +1891,7 @@ int SBAgent::createCodepacket5(int pkt_1, int pkt_2 , int pkt_3, int pkt_4, int 
     fprintf(mytraceFile, "sc\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\n", Scheduler::instance().clock(), my_addr(),my_addr(),ph->pktnum_,ph->codevc_);
     //即時送信
     send(p,0);
+    send_packet_count++;
     //遅延送信
     //Scheduler::instance().schedule(target_,p,0.01 * Random::uniform());
 }
