@@ -39,7 +39,7 @@
 #define START_TIME 10.0
 #define END_TIME 40.0
 
-#define MCAST_MEMBER_1 15
+#define MCAST_MEMBER_1 17
 #define MCAST_MEMBER_2 9
 #define MCAST_MEMBER_3 10
 #define MCAST_MEMBER_4 11
@@ -134,6 +134,7 @@ void SBAgent::resetBcastTimer() {
 
 static int pktnum=1;
 static int codepktnum=1;
+static int reqpktnum=1;
 static int recvlog[BUF][BUF];
 static int recvcodecount[BUF];
 static int recvcodelog[BUF][BUF];
@@ -144,6 +145,8 @@ static int recvcode3[BUF][BUF];
 static int recvcode4[BUF][BUF];
 static int recvcode5[BUF][BUF];
 static int recvcodeFlag[BUF][BUF];
+static int recvreqlog[BUF][BUF];
+static int recvreplog[BUF][BUF];
 
 
 struct sendcodeinfo{
@@ -1346,10 +1349,80 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
 	}
 	else if(ph->pkttype_==PKT_REQUEST){
+        if(CODE_NUM==2) {
+            //受信記録
+            if(recvreqlog[my_addr()][ph->pktnum_]==0){
+                recvreqlog[my_addr()][ph->pktnum_]=1;
+            }
+            else{//一度受け取ったパケットは破棄
+                return;
+            }
+            fprintf(mytraceFile,"rq\t");
+            fprintf(mytraceFile,"%f\t",Scheduler::instance().clock());
+            fprintf(mytraceFile,"%d\t",my_addr());
+            fprintf(mytraceFile,"%d\t",ph->addr());
+            fprintf(mytraceFile,"%d\t",ph->pkttype_);
+            fprintf(mytraceFile,"%d\t",ph->pktnum_);
+            fprintf(mytraceFile,"%d\t",ph->hop_count_);
+            fprintf(mytraceFile,"%d\t",ph->codevc_);
+            fprintf(mytraceFile,"%d\t",ph->encode_count_);
+            fprintf(mytraceFile,"%f\t",goukei_topo);
+            fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
+            fprintf(mytraceFile,"%d\t",neighbor_count);
+            fprintf(mytraceFile,"%d\t",fl_count);
+            fprintf(mytraceFile,"%d\t",nc_count);
+            fprintf(mytraceFile,"%f\t",hendou);
+            fprintf(mytraceFile,"%f\t",neigh_freq);
+            fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+            fprintf(mytraceFile,"\n");
 
+
+            //要求パケットを持っていたら送信
+            if (recvlog[my_addr()][ph->pkt1_] == 1 && recvlog[my_addr()][ph->pkt2_] == 1) {
+                createReplypacket(ph->pkt1_, ph->first_sender_);
+                createReplypacket(ph->pkt2_, ph->first_sender_);
+            }
+            else if (recvlog[my_addr()][ph->pkt1_] == 1 && recvlog[my_addr()][ph->pkt2_] == 0) {
+                createReplypacket(ph->pkt1_, ph->first_sender_);
+                createReqpacket1(ph->pkt2_,ph->first_sender_);
+            }
+            else if(recvlog[my_addr()][ph->pkt1_] == 0 && recvlog[my_addr()][ph->pkt2_] == 1){
+                createReplypacket(ph->pkt2_, ph->first_sender_);
+                createReqpacket1(ph->pkt1_,ph->first_sender_);
+            }
+            return;
+        }
 
 	}
 	else if(ph->pkttype_==PKT_REPLY){
+        fprintf(mytraceFile,"rp\t");
+        fprintf(mytraceFile,"%f\t",Scheduler::instance().clock());
+        fprintf(mytraceFile,"%d\t",my_addr());
+        fprintf(mytraceFile,"%d\t",ph->addr());
+        fprintf(mytraceFile,"%d\t",ph->pkttype_);
+        fprintf(mytraceFile,"%d\t",ph->pktnum_);
+        fprintf(mytraceFile,"%d\t",ph->hop_count_);
+        fprintf(mytraceFile,"%d\t",ph->codevc_);
+        fprintf(mytraceFile,"%d\t",ph->encode_count_);
+        fprintf(mytraceFile,"%f\t",goukei_topo);
+        fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
+        fprintf(mytraceFile,"%d\t",neighbor_count);
+        fprintf(mytraceFile,"%d\t",fl_count);
+        fprintf(mytraceFile,"%d\t",nc_count);
+        fprintf(mytraceFile,"%f\t",hendou);
+        fprintf(mytraceFile,"%f\t",neigh_freq);
+        fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+        fprintf(mytraceFile,"\n");
+
+
+
+        if(ph->destination_==my_addr()){
+            recvlog[my_addr()][ph->pkt1_]=1;
+            return;
+        }
+        else{
+
+        }
 
 
 	}
@@ -1400,13 +1473,53 @@ void SBAgent::recv(Packet *p,Handler *h) {
         fprintf(resFile,"\n");
     }
 
+    //パケットチェック
+    if(my_addr()==MCAST_MEMBER_1){
+
+    }
+    //再送要求
+    static int asada=0;
+    if(Scheduler::instance().clock()>10&&my_addr()==MCAST_MEMBER_1 && asada==0){
+        createReqpacket2(1,2,my_addr());
+        asada=1;
+    }
 
 
     //送信動作
 	if(ph->pkttype_==PKT_REQUEST){
 	}
 	else if(ph->pkttype_==PKT_REPLY){
-	}
+        ph->addr() = my_addr();
+        ph->pkttype_ = PKT_NORMAL;
+        ph->hop_count_++;
+        ch->next_hop() = IP_BROADCAST;
+        ch->addr_type() = NS_AF_NONE;
+        ch->direction() = hdr_cmn::DOWN;
+
+        fprintf(mytraceFile,"fp\t");
+        fprintf(mytraceFile,"%f\t",Scheduler::instance().clock());
+        fprintf(mytraceFile,"%d\t",my_addr());
+        fprintf(mytraceFile,"%d\t",ph->addr());
+        fprintf(mytraceFile,"%d\t",ph->pkttype_);
+        fprintf(mytraceFile,"%d\t",ph->pktnum_);
+        fprintf(mytraceFile,"%d\t",ph->hop_count_);
+        fprintf(mytraceFile,"%d\t",ph->codevc_);
+        fprintf(mytraceFile,"%d\t",ph->encode_count_);
+        fprintf(mytraceFile,"%f\t",goukei_topo);
+        fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
+        fprintf(mytraceFile,"%d\t",neighbor_count);
+        fprintf(mytraceFile,"%d\t",fl_count);
+        fprintf(mytraceFile,"%d\t",nc_count);
+        fprintf(mytraceFile,"%f\t",hendou);
+        fprintf(mytraceFile,"%f\t",neigh_freq);
+        fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+        fprintf(mytraceFile,"\n");
+
+
+
+        send(p,0);
+
+    }
 	else if(ph->pkttype_==PKT_CODED){
 	    if(flag == 1){//符号パケットを受信して復号に成功した場合
 	        if(CODE_NUM == 2){
@@ -1472,7 +1585,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
                     }
                 }
             }
-           //これでいけるか？
+           //これでいけるか？k
             //if(ph->encode_count_<CODE_NUM) {
             if(codesendeflag==0){
                 if (CODE_NUM == 2) {
@@ -1894,4 +2007,198 @@ int SBAgent::createCodepacket5(int pkt_1, int pkt_2 , int pkt_3, int pkt_4, int 
     send_packet_count++;
     //遅延送信
     //Scheduler::instance().schedule(target_,p,0.01 * Random::uniform());
+}
+
+
+int SBAgent::createReqpacket1(int pkt_1,int dest) {
+    Packet* p = allocpkt();
+    struct hdr_cmn* ch = HDR_CMN(p);
+    struct hdr_ip* ih = HDR_IP(p);
+    struct hdr_beacon * ph = HDR_BEACON(p);
+
+    ph->addr() = my_addr();
+    ph->seq_num() = seq_num_++;
+
+    ph->pktnum_=reqpktnum;
+    ph->pkttype_=PKT_REQUEST;
+    ch->ptype() = PT_SB;
+    ph->codenum_=-1;
+    ph->codevc_=-1;
+
+    ph->pkt1_=pkt_1;
+    ph->pkt2_=-1;
+    ph->pkt3_=-1;
+    ph->pkt4_=-1;
+    ph->pkt5_=-1;
+    ph->hop_count_=1;
+    ph->encode_count_=-1;
+    ph->first_sender_=my_addr();
+    ph->destination_=dest;
+    ch->direction() = hdr_cmn::DOWN;
+    ch->size() = IP_HDR_LEN;
+    ch->error() = 0;
+    ch->next_hop() = IP_BROADCAST;
+    ch->addr_type() = NS_AF_INET;
+
+    ih->saddr() = my_addr();
+    ih->daddr() = IP_BROADCAST;
+    ih->sport() = RT_PORT;
+    ih->dport() = RT_PORT;
+    ih->ttl() = IP_DEF_TTL;
+
+    fprintf(mytraceFile,"sq1\t");
+    fprintf(mytraceFile,"%f\t",Scheduler::instance().clock());
+    fprintf(mytraceFile,"%d\t",my_addr());
+    fprintf(mytraceFile,"%d\t",ph->addr());
+    fprintf(mytraceFile,"%d\t",ph->pkttype_);
+    fprintf(mytraceFile,"%d\t",ph->pktnum_);
+    fprintf(mytraceFile,"%d\t",ph->hop_count_);
+    fprintf(mytraceFile,"%d\t",ph->codevc_);
+    fprintf(mytraceFile,"%d\t",ph->encode_count_);
+    //fprintf(mytraceFile,"%f\t",goukei_topo);
+    //fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
+    //fprintf(mytraceFile,"%d\t",neighbor_count);
+    //fprintf(mytraceFile,"%d\t",fl_count);
+    //fprintf(mytraceFile,"%d\t",nc_count);
+    fprintf(mytraceFile,"\t\t\t\t\t\t\t");
+    fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+    fprintf(mytraceFile,"\n");
+
+
+    //即時送信
+    send(p,0);
+    send_packet_count++;
+    //遅延送信
+    //Scheduler::instance().schedule(target_,p,0.01 * Random::uniform());
+}
+
+int SBAgent::createReqpacket2(int pkt_1, int pkt_2,int dest) {
+    Packet* p = allocpkt();
+    struct hdr_cmn* ch = HDR_CMN(p);
+    struct hdr_ip* ih = HDR_IP(p);
+    struct hdr_beacon * ph = HDR_BEACON(p);
+
+    ph->addr() = my_addr();
+    ph->seq_num() = seq_num_++;
+
+    ph->pktnum_=reqpktnum;
+    ph->pkttype_=PKT_REQUEST;
+    ch->ptype() = PT_SB;
+    ph->codenum_=-1;
+    ph->codevc_=-1;
+
+    ph->pkt1_=pkt_1;
+    ph->pkt2_=pkt_2;
+    ph->pkt3_=-1;
+    ph->pkt4_=-1;
+    ph->pkt5_=-1;
+    ph->hop_count_=1;
+    ph->encode_count_=-1;
+    ph->first_sender_=my_addr();
+    ph->destination_=dest;
+
+    ch->direction() = hdr_cmn::DOWN;
+    ch->size() = IP_HDR_LEN;
+    ch->error() = 0;
+    ch->next_hop() = IP_BROADCAST;
+    ch->addr_type() = NS_AF_INET;
+
+    ih->saddr() = my_addr();
+    ih->daddr() = IP_BROADCAST;
+    ih->sport() = RT_PORT;
+    ih->dport() = RT_PORT;
+    ih->ttl() = IP_DEF_TTL;
+
+    fprintf(mytraceFile,"sq2\t");
+    fprintf(mytraceFile,"%f\t",Scheduler::instance().clock());
+    fprintf(mytraceFile,"%d\t",my_addr());
+    fprintf(mytraceFile,"%d\t",ph->addr());
+    fprintf(mytraceFile,"%d\t",ph->pkttype_);
+    fprintf(mytraceFile,"%d\t",ph->pktnum_);
+    fprintf(mytraceFile,"%d\t",ph->hop_count_);
+    fprintf(mytraceFile,"%d\t",ph->codevc_);
+    fprintf(mytraceFile,"%d\t",ph->encode_count_);
+    //fprintf(mytraceFile,"%f\t",goukei_topo);
+    //fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
+    //fprintf(mytraceFile,"%d\t",neighbor_count);
+    //fprintf(mytraceFile,"%d\t",fl_count);
+    //fprintf(mytraceFile,"%d\t",nc_count);
+    fprintf(mytraceFile,"\t\t\t\t\t\t\t");
+    fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+    fprintf(mytraceFile,"\n");
+
+
+
+    //即時送信
+    send(p,0);
+    send_packet_count++;
+    //遅延送信
+    //Scheduler::instance().schedule(target_,p,0.01 * Random::uniform());
+}
+
+int SBAgent::createReplypacket(int pkt_1, int dest) {
+    Packet* p = allocpkt();
+    struct hdr_cmn* ch = HDR_CMN(p);
+    struct hdr_ip* ih = HDR_IP(p);
+    struct hdr_beacon * ph = HDR_BEACON(p);
+
+    ph->addr() = my_addr();
+    ph->seq_num() = seq_num_++;
+
+    ph->pktnum_=reqpktnum;
+    ph->pkttype_=PKT_REPLY;
+    ch->ptype() = PT_SB;
+    ph->codenum_=-1;
+    ph->codevc_=-1;
+
+    ph->pkt1_=pkt_1;
+    ph->pkt2_=-1;
+    ph->pkt3_=-1;
+    ph->pkt4_=-1;
+    ph->pkt5_=-1;
+    ph->hop_count_=1;
+    ph->encode_count_=-1;
+    ph->first_sender_=my_addr();
+    ph->destination_=dest;
+
+
+
+    ch->direction() = hdr_cmn::DOWN;
+    ch->size() = IP_HDR_LEN;
+    ch->error() = 0;
+    ch->next_hop() = IP_BROADCAST;
+    ch->addr_type() = NS_AF_INET;
+
+    ih->saddr() = my_addr();
+    ih->daddr() = IP_BROADCAST;
+    ih->sport() = RT_PORT;
+    ih->dport() = RT_PORT;
+    ih->ttl() = IP_DEF_TTL;
+
+    fprintf(mytraceFile,"sp\t");
+    fprintf(mytraceFile,"%f\t",Scheduler::instance().clock());
+    fprintf(mytraceFile,"%d\t",my_addr());
+    fprintf(mytraceFile,"%d\t",ph->addr());
+    fprintf(mytraceFile,"%d\t",ph->pkttype_);
+    fprintf(mytraceFile,"%d\t",ph->pktnum_);
+    fprintf(mytraceFile,"%d\t",ph->hop_count_);
+    fprintf(mytraceFile,"%d\t",ph->codevc_);
+    fprintf(mytraceFile,"%d\t",ph->encode_count_);
+    //fprintf(mytraceFile,"%f\t",goukei_topo);
+    //fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
+    //fprintf(mytraceFile,"%d\t",neighbor_count);
+    //fprintf(mytraceFile,"%d\t",fl_count);
+    //fprintf(mytraceFile,"%d\t",nc_count);
+    fprintf(mytraceFile,"\t\t\t\t\t\t\t");
+    fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+    fprintf(mytraceFile,"\n");
+
+
+
+    //即時送信
+    send(p,0);
+    send_packet_count++;
+    //遅延送信
+    //Scheduler::instance().schedule(target_,p,0.01 * Random::uniform());
+    reqpktnum++;
 }
