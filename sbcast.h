@@ -29,6 +29,7 @@ struct hdr_beacon {
     int encode_count_;
     int first_sender_;
     int destination_;
+    int hoplimit_;
     inline nsaddr_t & addr() { return addr_; }
     inline u_int8_t & seq_num() { return seq_num_; }
     static int offset_;
@@ -74,7 +75,7 @@ public:
     int createCodepacket5(int,int,int,int,int, int);
     int createReqpacket1(int,int);
     int createReqpacket2(int, int,int);
-    int createReplypacket(int,int);
+    int createReplypacket(int,int,int);
 
     inline nsaddr_t & my_addr() { return my_addr_;}
 };
