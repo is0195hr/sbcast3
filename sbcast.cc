@@ -27,7 +27,7 @@
 #define TIME_TH 5.0    //float
 #define NEIGHBOR_TH 2  //int
 
-#define NODE_NUM 18//18
+#define NODE_NUM 50//18
 #define GALOIS 256
 #define DELAY 1.0
 #define MAX_PACKET 750
@@ -598,7 +598,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
         }
         else{
             fprintf(tempFile,"d\n");
-            judge_res=0;//teian=0
+            judge_res=1;//teian=0
 
         }
     }
@@ -1490,7 +1490,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
 
     //到達率計算
-    if(/*Scheduler::instance().clock()>END_TIME && */my_addr()==MCAST_MEMBER_1 /*|| my_addr()==MCAST_MEMBER_2 || my_addr()==MCAST_MEMBER_3 || my_addr()==MCAST_MEMBER_4 || my_addr()==MCAST_MEMBER_5*/){
+    if(Scheduler::instance().clock()>END_TIME && my_addr()==MCAST_MEMBER_1 || my_addr()==MCAST_MEMBER_2 || my_addr()==MCAST_MEMBER_3 || my_addr()==MCAST_MEMBER_4 || my_addr()==MCAST_MEMBER_5){
         int aru_count = 0;
         for (int i = 41; i <= 160; i++) {
             if (recvlog[my_addr()][i] == 1) {
@@ -1523,7 +1523,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
             }
         }
         //再送要求
-        if(request_queue_count%2==0) {
+    /*    if(request_queue_count%2==0) {
             for (i = 0; i < request_queue_count; i++) {
                 createReqpacket2(request_queue[i], request_queue[i+1],my_addr());
                 i++;
@@ -1535,7 +1535,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
                 i++;
             }
             createReqpacket1(request_queue[request_queue_count-1],my_addr());
-        }
+        }*/
         request_flag=0;
         next_time=Scheduler::instance().clock()+2;
     }
