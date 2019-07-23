@@ -60,7 +60,6 @@ FILE * temp2File=fopen ("temp2.csv","wt");
 FILE * calcFile=fopen ("calc.tr","wt");
 
 
-
 // TCL Hooks
 int hdr_beacon::offset_;
 
