@@ -347,7 +347,7 @@ void SBAgent::sendBeacon() {
     fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
     fprintf(mytraceFile,"\n");
     //ch->uid()=-1;
-	fprintf(stdout,"uid %d\n",ch->uid());
+	//fprintf(stdout,"uid %d\n",ch->uid());
     long int pktid;
     int id=-1;
     if (id < 0) { //new broadcast pkt
@@ -669,7 +669,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
     }
     if(aa==0) {
         for (int neinode = 0; neinode < NODE_NUM; neinode++) {
-            fprintf(stdout, "-------------calcing %d node\n", neinode);
+            //fprintf(stdout, "-------------calcing %d node\n", neinode);
             //区切りエントリに基づいて、現在のエントリから遡り、ヒット数を計測
             hitcount[my_addr()] = 0;
             for (int i = sendercount[my_addr()]; i >= topocount[my_addr()]; i--) {
@@ -680,11 +680,11 @@ void SBAgent::recv(Packet *p,Handler *h) {
             }
             float topo_all, topo_latest;
             topo_all = (float) hitcount[my_addr()] / (float) bunbo;//neinodeの全体トポロジ値
-            fprintf(stdout, "topo_all:%f (%d/%d)\n", topo_all, hitcount[my_addr()], bunbo);
-            fprintf(stdout, "hit:%d\n", hitcount[my_addr()]);
+            //fprintf(stdout, "topo_all:%f (%d/%d)\n", topo_all, hitcount[my_addr()], bunbo);
+            //fprintf(stdout, "hit:%d\n", hitcount[my_addr()]);
             int active=1;//履歴にヒットしない場合は状態カウントしない
             if (hitcount[my_addr()] == 0) {
-                fprintf(stdout, "node%dは自ノード(%d)または非隣接ノードのため無効\n", neinode, my_addr());
+                //fprintf(stdout, "node%dは自ノード(%d)または非隣接ノードのため無効\n", neinode, my_addr());
                 active=0;
                 //break;
             }
@@ -698,8 +698,8 @@ void SBAgent::recv(Packet *p,Handler *h) {
             int half_count;
             half_count = sendercount[my_addr()] - kosuu / 2 + 1;
 
-            fprintf(stdout, "%d-%d+1=hanbun:%d\n", sendercount[my_addr()], topocount[my_addr()], kosuu);
-            fprintf(stdout, "half_count:%d\n", half_count);
+            //fprintf(stdout, "%d-%d+1=hanbun:%d\n", sendercount[my_addr()], topocount[my_addr()], kosuu);
+            //fprintf(stdout, "half_count:%d\n", half_count);
             //半分のヒット数を計測
             int half_hit = 0;
             for (int i = sendercount[my_addr()]; i >= half_count; i--) {
@@ -712,23 +712,23 @@ void SBAgent::recv(Packet *p,Handler *h) {
             //全体のエントリ数が1のときの例外
             if (kosuu == 1) {
                 half_topo = 1;
-                fprintf(stdout, "全体のエントリ数が1なのでhalf_topoを1に変更\n");
+                //fprintf(stdout, "全体のエントリ数が1なのでhalf_topoを1に変更\n");
             }
-            fprintf(stdout, "半分 %f,%d,%d\n", half_topo, half_hit, ((kosuu / 2) + 1));
+            //fprintf(stdout, "半分 %f,%d,%d\n", half_topo, half_hit, ((kosuu / 2) + 1));
 
             //全体+half
             float goukei_topo_temp;
             goukei_topo_temp = (topo_all + half_topo) / 2;
 
-            fprintf(stdout, "合算topo:%f\n", goukei_topo_temp);
+            //fprintf(stdout, "合算topo:%f\n", goukei_topo_temp);
 
             if(active==1) {
                 if (goukei_topo_temp <= SWITCH_TH) {
                     fl_count++;
-                    fprintf(stdout,"node:%d is dinamic\n",neinode);
+                    //fprintf(stdout,"node:%d is dinamic\n",neinode);
                 } else if (goukei_topo_temp >= SWITCH_TH) {
                     nc_count++;
-                    fprintf(stdout,"node:%d is static\n",neinode);
+                    //fprintf(stdout,"node:%d is static\n",neinode);
 
                 } else {
                     fprintf(mytraceFile, "err \n");
@@ -736,9 +736,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
                 }
             }
             else if(active==0){
-                fprintf(stdout,"node:%d is no entry\n",neinode);
+                //fprintf(stdout,"node:%d is no entry\n",neinode);
             }
-            fprintf(stdout, "*node:%d neighbor node  fl:%d, nc:%d\n", my_addr(), fl_count, nc_count);
+            //fprintf(stdout, "*node:%d neighbor node  fl:%d, nc:%d\n", my_addr(), fl_count, nc_count);
 
             //fprintf(mytraceFile, "node:%d neighbor node %d fl:%d, nc:%d\n",my_addr(),neinode, fl_count, nc_count);
             if(active==1) {
@@ -747,12 +747,12 @@ void SBAgent::recv(Packet *p,Handler *h) {
             }
         }
         //fprintf(mytraceFile, "*node:%d neighbor node  fl:%d, nc:%d\n", my_addr(), fl_count, nc_count);
-        fprintf(stdout, "*node:%d neighbor node  fl:%d, nc:%d\n", my_addr(), fl_count, nc_count);
+        //fprintf(stdout, "*node:%d neighbor node  fl:%d, nc:%d\n", my_addr(), fl_count, nc_count);
 
         //  if(fl_count!=0||nc_count!=0)
-        fprintf(stdout, "**node:%d neighbor node  fl:%d, nc:%d\n", my_addr(), fl_count, nc_count);
+        //fprintf(stdout, "**node:%d neighbor node  fl:%d, nc:%d\n", my_addr(), fl_count, nc_count);
         neigh_topo=(float)fl_count/(float)(fl_count+nc_count);
-        fprintf(stdout,"++++++++++++++++++nei:%f\n",neigh_topo);
+        //fprintf(stdout,"++++++++++++++++++nei:%f\n",neigh_topo);
         //fprintf(tpFile,"node:%d\tfl_count:%d\tnc_count:%d\tNei_topo:%f\tgoukei:%f\n",my_addr(),fl_count,nc_count,neigh_topo,goukei_topo);
         fprintf(tpFile,"%f\t%d\t%d\t%f\t%d\t%d\n",Scheduler::instance().clock(),my_addr(),sender[my_addr()][sendercount[my_addr()]],neigh_topo,fl_count,nc_count);
 
