@@ -27,7 +27,7 @@
 #define TIME_TH 5.0    //float
 #define NEIGHBOR_TH 2  //int
 
-#define NODE_NUM 50//18
+#define NODE_NUM 75//18
 #define GALOIS 256
 #define DELAY 1.0
 #define MAX_PACKET 750
