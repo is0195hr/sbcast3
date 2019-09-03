@@ -68,6 +68,7 @@ public:
     void recv(Packet *,Handler *);
     void sendBeacon();
     void sendRequest();
+    void printRes();
     void resetBcastTimer();
     int createCodepacket2(int,int, int);
     int createCodepacket3(int,int,int, int);

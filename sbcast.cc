@@ -24,10 +24,10 @@
 
 
 #define SWITCH_TH 0.3  //float
-#define TIME_TH 5.0    //float
+#define TIME_TH 7.0    //float
 #define NEIGHBOR_TH 2  //int
 
-#define NODE_NUM 75//18
+#define NODE_NUM 150//18
 #define GALOIS 256
 #define DELAY 1.0
 #define MAX_PACKET 750
@@ -44,6 +44,13 @@
 #define MCAST_MEMBER_3 10
 #define MCAST_MEMBER_4 11
 #define MCAST_MEMBER_5 12
+
+//動的切り替え用
+#define MODE_FL 0
+#define MODE_NC 1
+#define MODE_AFC 2
+//切り替え用マクロ
+#define SIM_MODE 2
 
 FILE * mytraceFile=fopen ("mytrace.tr","wt");
 FILE * codelogFile=fopen ("codelog.tr","wt");
@@ -118,17 +125,15 @@ int SBAgent::command(int argc,const char*const* argv) {
 }
 
 void BcastTimer::expire(Event *e) {
+    agent_->printRes();
 	agent_->sendBeacon();
 	agent_->resetBcastTimer();
-
 }
 
 void SBAgent::resetBcastTimer() {
 	// Reschedule the timer for every 0.1 seconds
 	btimer_.resched((double)0.25);
-
 }
-
 
 
 static int pktnum=1;
@@ -376,7 +381,6 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
     fflush(mytraceFile);
     fflush(codelogFile);
-    fflush(resFile);
     //fflush(recvcodehistoryFile);
     //fflush(recvlogFile);
 
@@ -395,11 +399,11 @@ void SBAgent::recv(Packet *p,Handler *h) {
     if(Scheduler::instance().clock()>START_TIME ) {
         //packet_count++;
     }
-    static float nexttime=END_TIME;
+  /*  static float nexttime=END_TIME;
     if(Scheduler::instance().clock()>nexttime){
         fprintf(resFile,"packet_count:%d %d %d %d\n",rcv_packet_count,send_packet_count,req_packet_count,rep_packet_count);
         nexttime=Scheduler::instance().clock()+1;
-    }
+    }*/
 
     //送信者と時刻を記録
     sender[my_addr()][sendercount[my_addr()]] = ph->addr();
@@ -586,18 +590,51 @@ void SBAgent::recv(Packet *p,Handler *h) {
     int judge_res=0;//static=1,dynamic=0;
     float hendou=sqrt(bunsan)/neigh_freq;
     if(hendou<=0.1){
-        fprintf(tempFile,"s\n");
+        //fprintf(tempFile,"s\n");
         judge_res=1;//teian=1
+        switch (SIM_MODE){
+            case MODE_FL:
+                judge_res=0;
+                break;
+            case MODE_NC:
+                judge_res=1;
+                break;
+            case MODE_AFC:
+                judge_res=1;
+                break;
+        }
     }
     else{
         if(sender_freq_seiki>=0.5){
             fprintf(tempFile,"s\n");
-            judge_res=1;//teian=1
+            //judge_res=1;//teian=1
+            switch (SIM_MODE){
+                case MODE_FL:
+                    judge_res=0;
+                    break;
+                case MODE_NC:
+                    judge_res=1;
+                    break;
+                case MODE_AFC:
+                    judge_res=1;
+                    break;
+            }
 
         }
         else{
             fprintf(tempFile,"d\n");
-            judge_res=1;//teian=0
+            //judge_res=1;//teian=0
+            switch (SIM_MODE){
+                case MODE_FL:
+                    judge_res=0;
+                    break;
+                case MODE_NC:
+                    judge_res=1;
+                    break;
+                case MODE_AFC:
+                    judge_res=0;
+                    break;
+            }
 
         }
     }
@@ -1489,7 +1526,8 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
 
     //到達率計算
-    if(Scheduler::instance().clock()>END_TIME && my_addr()==MCAST_MEMBER_1 || my_addr()==MCAST_MEMBER_2 || my_addr()==MCAST_MEMBER_3 || my_addr()==MCAST_MEMBER_4 || my_addr()==MCAST_MEMBER_5){
+  /*  static float nexttime2 = END_TIME;
+    if(Scheduler::instance().clock() > nexttime2 && (my_addr()==MCAST_MEMBER_1 || my_addr()==MCAST_MEMBER_2 || my_addr()==MCAST_MEMBER_3 || my_addr()==MCAST_MEMBER_4 || my_addr()==MCAST_MEMBER_5) ){
         int aru_count = 0;
         for (int i = 41; i <= 160; i++) {
             if (recvlog[my_addr()][i] == 1) {
@@ -1506,7 +1544,8 @@ void SBAgent::recv(Packet *p,Handler *h) {
             }
         }
         fprintf(resFile,"\n");
-    }
+        nexttime2 = Scheduler::instance().clock() + 1;
+    }*/
 
     //パケットチェック
     int request_queue[BUF];
@@ -2321,4 +2360,37 @@ int SBAgent::createReplypacket(int pkt_1, int dest, int hoplimit) {
     //遅延送信
     Scheduler::instance().schedule(target_,p,0.01 * Random::uniform());
     reppktnum++;
+}
+
+void SBAgent::printRes(){
+    static bool done = false;
+    if(done == false && Scheduler::instance().clock() > END_TIME + 10){
+        //総パケット数
+        fprintf(resFile,"packet_count:%d %d %d %d\n",rcv_packet_count,send_packet_count,req_packet_count,rep_packet_count);
+
+        int nodes[] = {MCAST_MEMBER_1, MCAST_MEMBER_2, MCAST_MEMBER_3, MCAST_MEMBER_4, MCAST_MEMBER_5};
+        //for(int node : nodes) {
+        for(int k = 0; k < 5 ; k++){
+            int aru_count = 0;
+            for (int i = 41; i <= 160; i++) {
+                if (recvlog[nodes[k]][i] == 1) {
+                    aru_count++;
+                }
+            }
+            fprintf(resFile, "node:%d d_rate:%f\n", nodes[k], (float) aru_count / 120);
+            //0,1表記
+            /*
+            for (int i = 41; i <= 160; i++) {
+                fprintf(resFile, "%d", recvlog[my_addr()][i]);
+                if (i % 10 == 0) {
+                    fprintf(resFile, " ");
+                }
+            }
+            fprintf(resFile, "\n");
+            */
+            fflush(resFile);
+        }
+        done = true;
+    }
+
 }
