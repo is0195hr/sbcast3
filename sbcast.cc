@@ -23,6 +23,7 @@
 #define STA_HYBRID 3
 
 
+
 #define SWITCH_TH 0.3  //float
 #define TIME_TH 7.0    //float
 #define NEIGHBOR_TH 2  //int
@@ -51,6 +52,10 @@
 #define MODE_AFC 2
 //切り替え用マクロ
 #define SIM_MODE 2
+
+#define HENDOU 0.1
+#define SEIKI 0.7
+
 
 FILE * mytraceFile=fopen ("mytrace.tr","wt");
 FILE * codelogFile=fopen ("codelog.tr","wt");
@@ -589,7 +594,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
     //パラメータ
     int judge_res=0;//static=1,dynamic=0;
     float hendou=sqrt(bunsan)/neigh_freq;
-    if(hendou<=0.1){
+    if(hendou<=HENDOU){
         //fprintf(tempFile,"s\n");
         judge_res=1;//teian=1
         switch (SIM_MODE){
@@ -605,7 +610,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
         }
     }
     else{
-        if(sender_freq_seiki>=0.5){
+        if(sender_freq_seiki>=SEIKI){
             fprintf(tempFile,"s\n");
             //judge_res=1;//teian=1
             switch (SIM_MODE){
