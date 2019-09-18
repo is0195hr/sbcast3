@@ -25,7 +25,7 @@
 
 
 #define SWITCH_TH 0.3  //float
-#define TIME_TH 7.0    //float
+#define TIME_TH 20.0    //float
 #define NEIGHBOR_TH 2  //int
 
 #define NODE_NUM 150//18
@@ -53,8 +53,8 @@
 //切り替え用マクロ
 #define SIM_MODE 2
 
-#define HENDOU 0.1
-#define SEIKI 0.7
+#define HENDOU 0.2
+#define SEIKI 1.0
 
 
 FILE * mytraceFile=fopen ("mytrace.tr","wt");
@@ -69,7 +69,9 @@ FILE * resFile=fopen ("res.tr","wt");
 FILE * tpFile=fopen ("tp.tr","wt");
 FILE * tempFile=fopen ("temp.csv","wt");
 FILE * temp2File=fopen ("temp2.csv","wt");
+FILE * temp3File=fopen ("temp3.csv","wt");
 FILE * calcFile=fopen ("calc.tr","wt");
+
 
 
 // TCL Hooks
@@ -211,8 +213,6 @@ void SBAgent::sendRequest(){
 void SBAgent::sendBeacon() {
     static int syokika=0;
     fprintf(codelogFile,"test\n");
-    fprintf(temp2File,"test\n");
-
     if(syokika==0){//初期化
         for(int i=0;i<BUF;i++){
             for(int j=0;j<BUF;j++){
@@ -374,6 +374,17 @@ void SBAgent::sendBeacon() {
     //Scheduler::instance().schedule(target_,p,DELAY * Random::uniform());
 	pktnum++;
 }
+void printIndex(FILE * fp){
+    fprintf(fp,"time,"
+                "node,neigh,"
+                "neicount,bunbo,"
+                "ave,senderfreq,"
+                "bunsan,stdhensa,hendoukeisu,"
+                "max,min,max-min,"
+                "seiki,force,"
+                "0-1hantei,ave-hantei,bunsan-hanteo,hendoukeisuu-hantei,seiki+hendoukeisuu\n");
+
+}
 
 void SBAgent::recv(Packet *p,Handler *h) {
 
@@ -526,23 +537,38 @@ void SBAgent::recv(Packet *p,Handler *h) {
     bunsan=bunsan_sum/(float)neighbor_count;
     float sender_freq=0;
     sender_freq=hitcount[my_addr()];
-    static int aaa=0;
-    if(aaa==0){
-        fprintf(tempFile,"node,neigh,"
-                         "neicount,bunbo,"
-                         "ave,senderfreq,"
-                         "bunsan,stdhensa,hendoukeisu,"
-                         "max,min,max-min,"
-                         "seiki,force,"
-                         "0-1hantei,ave-hantei,bunsan-hanteo,hendoukeisuu-hantei,seiki+hendoukeisuu\n");
-        aaa=1;
+    FILE * fp;
+    static bool first1=false,first2=false, first3=false;
+    if(Scheduler::instance().clock()>0 && Scheduler::instance().clock() < START_TIME) {
+        fp = tempFile;
+        if(first1==false){
+            printIndex(fp);
+            first1=true;
+        }
     }
-    fprintf(tempFile,"%d,%d,",my_addr(),ph->addr());
-    fprintf(tempFile,"%d,%d,",neighbor_count,bunbo);
-    fprintf(tempFile,"%f,%f,",neigh_freq,sender_freq);
-    fprintf(tempFile,"%f,%f,%f,",bunsan,sqrt(bunsan),sqrt(bunsan)/neigh_freq);
+    else if(Scheduler::instance().clock() >=START_TIME && Scheduler::instance().clock() <=END_TIME){
+        fp = temp2File;
+        if(first2==false){
+            printIndex(fp);
+            first2=true;
+        }
+    }
+    else if(Scheduler::instance().clock() > END_TIME){
+        fp = temp3File;
+        if(first3==false){
+            printIndex(fp);
+            first3=true;
+        }
+    }
 
-    fprintf(tempFile,"%d,%d,%d,",freq_max,freq_min,freq_max-freq_min);
+
+    fprintf(fp,"%f,",Scheduler::instance().clock());
+    fprintf(fp,"%d,%d,",my_addr(),ph->addr());
+    fprintf(fp,"%d,%d,",neighbor_count,bunbo);
+    fprintf(fp,"%f,%f,",neigh_freq,sender_freq);
+    fprintf(fp,"%f,%f,%f,",bunsan,sqrt(bunsan),sqrt(bunsan)/neigh_freq);
+
+    fprintf(fp,"%d,%d,%d,",freq_max,freq_min,freq_max-freq_min);
 
 
     float sender_freq_seiki,freq_bunbo;
@@ -555,39 +581,39 @@ void SBAgent::recv(Packet *p,Handler *h) {
 	else{
         sender_freq_seiki=(sender_freq-(float)freq_min)/freq_bunbo;
 	}
-    fprintf(tempFile,"%f,",sender_freq_seiki);
+    fprintf(fp,"%f,",sender_freq_seiki);
     if(force==1){
-        fprintf(tempFile,"f,");
+        fprintf(fp,"f,");
     }
     else{
-        fprintf(tempFile,",");
+        fprintf(fp,",");
 
     }
     if(sender_freq_seiki>=0.5){
-        fprintf(tempFile,"s,");
+        fprintf(fp,"s,");
     }
     else{
-        fprintf(tempFile,"d,");
+        fprintf(fp,"d,");
     }
     if(sender_freq>=neigh_freq){
-        fprintf(tempFile,"s,");
+        fprintf(fp,"s,");
     }
     else{
-        fprintf(tempFile,"d,");
+        fprintf(fp,"d,");
     }
     //分散判定
     if(bunsan<=1){
-        fprintf(tempFile,"s,");
+        fprintf(fp,"s,");
     }
     else{
-        fprintf(tempFile,"d,");
+        fprintf(fp,"d,");
     }
     //変動係数判定
     if(sqrt(bunsan)/neigh_freq<=0.1){
-        fprintf(tempFile,"s,");
+        fprintf(fp,"s,");
     }
     else{
-        fprintf(tempFile,"d,");
+        fprintf(fp,"d,");
     }
 
     //seiki+変動係数
@@ -595,7 +621,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
     int judge_res=0;//static=1,dynamic=0;
     float hendou=sqrt(bunsan)/neigh_freq;
     if(hendou<=HENDOU){
-        //fprintf(tempFile,"s\n");
+        fprintf(fp,"hs\n");
         judge_res=1;//teian=1
         switch (SIM_MODE){
             case MODE_FL:
@@ -611,7 +637,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
     }
     else{
         if(sender_freq_seiki>=SEIKI){
-            fprintf(tempFile,"s\n");
+            fprintf(fp,"ss\n");
             //judge_res=1;//teian=1
             switch (SIM_MODE){
                 case MODE_FL:
@@ -627,7 +653,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
         }
         else{
-            fprintf(tempFile,"d\n");
+            fprintf(fp,"d\n");
             //judge_res=1;//teian=0
             switch (SIM_MODE){
                 case MODE_FL:
