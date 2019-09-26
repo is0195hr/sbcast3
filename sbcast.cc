@@ -39,6 +39,7 @@
 
 #define START_TIME 10.0
 #define END_TIME 40.0
+#define ADD_TIME 10.0
 
 #define MCAST_MEMBER_1 17
 #define MCAST_MEMBER_2 9
@@ -56,6 +57,9 @@
 #define HENDOU 0.2
 #define SEIKI 1.0
 
+#define SEND_INTERVAL 0.25
+
+
 
 FILE * mytraceFile=fopen ("mytrace.tr","wt");
 FILE * codelogFile=fopen ("codelog.tr","wt");
@@ -66,6 +70,7 @@ FILE * createcodeFile=fopen ("createcode.tr","wt");
 FILE * recvhistoryFile=fopen ("rcvhist.tr","wt");
 FILE * recvcodehistoryFile=fopen ("rcvcodehist.tr","wt");
 FILE * resFile=fopen ("res.tr","wt");
+FILE * resAllFile=fopen("resAll.csv","a");
 FILE * tpFile=fopen ("tp.tr","wt");
 FILE * tempFile=fopen ("temp.csv","wt");
 FILE * temp2File=fopen ("temp2.csv","wt");
@@ -139,7 +144,7 @@ void BcastTimer::expire(Event *e) {
 
 void SBAgent::resetBcastTimer() {
 	// Reschedule the timer for every 0.1 seconds
-	btimer_.resched((double)0.25);
+	btimer_.resched((double)SEND_INTERVAL);
 }
 
 
@@ -174,6 +179,9 @@ struct sendcodeinfo{
 static sendcodeinfo sendcodelog[BUF][BUF];
 static int sendcodecount[BUF];
 
+const int START_PKT = (int)((float)(1/SEND_INTERVAL) * START_TIME+1);
+const int END_PKT = (int)((float)(1/SEND_INTERVAL) * END_TIME);
+const int NUM_PKT = END_PKT - START_PKT+1;
 
 static int mystatus[BUF];
 static int collectlist[BUF][BUF];
@@ -621,7 +629,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
     int judge_res=0;//static=1,dynamic=0;
     float hendou=sqrt(bunsan)/neigh_freq;
     if(hendou<=HENDOU){
-        fprintf(fp,"hs\n");
+        fprintf(fp,"s\n");
         judge_res=1;//teian=1
         switch (SIM_MODE){
             case MODE_FL:
@@ -637,7 +645,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
     }
     else{
         if(sender_freq_seiki>=SEIKI){
-            fprintf(fp,"ss\n");
+            fprintf(fp,"s\n");
             //judge_res=1;//teian=1
             switch (SIM_MODE){
                 case MODE_FL:
@@ -2395,20 +2403,27 @@ int SBAgent::createReplypacket(int pkt_1, int dest, int hoplimit) {
 
 void SBAgent::printRes(){
     static bool done = false;
-    if(done == false && Scheduler::instance().clock() > END_TIME + 10){
+    if(done == false && Scheduler::instance().clock() > END_TIME + ADD_TIME){
         //総パケット数
         fprintf(resFile,"packet_count:%d %d %d %d\n",rcv_packet_count,send_packet_count,req_packet_count,rep_packet_count);
-
+        fprintf(resAllFile,"%d,",SIM_MODE);
+        fprintf(resAllFile,"%.2f,",TIME_TH);
+        fprintf(resAllFile,"%.2f,",HENDOU);
+        fprintf(resAllFile,"%.2f,",SEIKI);
+        fprintf(resAllFile,"%d,",send_packet_count);
         int nodes[] = {MCAST_MEMBER_1, MCAST_MEMBER_2, MCAST_MEMBER_3, MCAST_MEMBER_4, MCAST_MEMBER_5};
+        static float sum_drate;
+
         //for(int node : nodes) {
         for(int k = 0; k < 5 ; k++){
             int aru_count = 0;
-            for (int i = 41; i <= 160; i++) {
+            for (int i = START_PKT; i <= END_PKT; i++) {
                 if (recvlog[nodes[k]][i] == 1) {
                     aru_count++;
                 }
             }
-            fprintf(resFile, "node:%d d_rate:%f\n", nodes[k], (float) aru_count / 120);
+            fprintf(resFile, "node:%d d_rate:%f\n", nodes[k], (float) aru_count / NUM_PKT);
+            sum_drate = sum_drate + ((float) aru_count / NUM_PKT);
             //0,1表記
             /*
             for (int i = 41; i <= 160; i++) {
@@ -2420,7 +2435,10 @@ void SBAgent::printRes(){
             fprintf(resFile, "\n");
             */
             fflush(resFile);
+            fflush(resAllFile);
+
         }
+        fprintf(resAllFile,"%f\n",sum_drate/5);
         done = true;
     }
 
