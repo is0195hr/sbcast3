@@ -33,7 +33,6 @@
 #define DELAY 1.0
 #define MAX_PACKET 750
 
-#define TRANSTH_TYPE 3
 #define UNDER_TH 1
 #define UPPER_TH 1
 
@@ -56,6 +55,9 @@
 
 #define HENDOU 0.2
 #define SEIKI 1.0
+
+#define TRANSTH_TYPE 3 //3:総合判定,4:総合判定（確率NC
+#define PROBABILITY 0.5
 
 #define SEND_INTERVAL 0.25
 
@@ -929,7 +931,39 @@ void SBAgent::recv(Packet *p,Handler *h) {
                 mystatus[my_addr()]=STA_FL;
             }
             else if(judge_res==1){
+                //if(rand()%2==0)
                 mystatus[my_addr()]=STA_CODEWAIT;
+            }
+            else{
+                fprintf(mytraceFile,"err define my status\n");
+                return;
+            }
+        }
+    }
+    else if(TRANSTH_TYPE==4){//確率補正NC
+        //隣接ノードの判定総合結果による自分のステータス決定
+        if(mystatus[my_addr()]==STA_CODEWAIT){
+            mystatus[my_addr()]=STA_CODEWAIT;
+        }
+        else if(mystatus[my_addr()]==STA_CODESENDREADY){
+            mystatus[my_addr()]=STA_CODESENDREADY;
+        }
+        else if(neighbor_count<NEIGHBOR_TH){//隣接ノード数が足りない場合強制フラッディング
+            mystatus[my_addr()]=STA_FL;
+            //fprintf(mytraceFile,"force floding\n");
+        }
+        else {
+            if(judge_res==0){
+                mystatus[my_addr()]=STA_FL;
+            }
+            else if(judge_res==1){
+                //確率補正
+                if((double)rand()/RAND_MAX < PROBABILITY) {
+                    mystatus[my_addr()] = STA_CODEWAIT;
+                }
+                else{
+                    mystatus[my_addr()] = STA_FL;
+                }
             }
             else{
                 fprintf(mytraceFile,"err define my status\n");
