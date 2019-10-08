@@ -53,11 +53,11 @@
 //切り替え用マクロ
 #define SIM_MODE 2
 
-#define HENDOU 0.2
-#define SEIKI 1.0
+#define HENDOU 0.1
+#define SEIKI 1
 
-#define TRANSTH_TYPE 3 //3:総合判定,4:総合判定（確率NC
-#define PROBABILITY 0.5
+#define TRANSTH_TYPE 4 //3:総合判定,4:総合判定（確率NC
+#define PROBABILITY 0.6
 
 #define SEND_INTERVAL 0.25
 
@@ -2444,6 +2444,7 @@ void SBAgent::printRes(){
         fprintf(resAllFile,"%.2f,",TIME_TH);
         fprintf(resAllFile,"%.2f,",HENDOU);
         fprintf(resAllFile,"%.2f,",SEIKI);
+        fprintf(resAllFile,"%.2f,",PROBABILITY);
         fprintf(resAllFile,"%d,",send_packet_count);
         int nodes[] = {MCAST_MEMBER_1, MCAST_MEMBER_2, MCAST_MEMBER_3, MCAST_MEMBER_4, MCAST_MEMBER_5};
         static float sum_drate;
