@@ -2444,6 +2444,7 @@ void SBAgent::printRes(){
         fprintf(resAllFile,"%.2f,",TIME_TH);
         fprintf(resAllFile,"%.2f,",HENDOU);
         fprintf(resAllFile,"%.2f,",SEIKI);
+        fprintf(resAllFile,"%d,",TRANSTH_TYPE);
         fprintf(resAllFile,"%.2f,",PROBABILITY);
         fprintf(resAllFile,"%d,",send_packet_count);
         int nodes[] = {MCAST_MEMBER_1, MCAST_MEMBER_2, MCAST_MEMBER_3, MCAST_MEMBER_4, MCAST_MEMBER_5};
