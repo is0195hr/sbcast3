@@ -53,11 +53,11 @@
 //切り替え用マクロ
 #define SIM_MODE 2
 
-#define HENDOU 0.1
-#define SEIKI 1
+#define HENDOU 0.2 //float
+#define SEIKI 1.0 //float
 
-#define TRANSTH_TYPE 4 //3:総合判定,4:総合判定（確率NC
-#define PROBABILITY 0.6
+#define TRANSTH_TYPE 3//3:総合判定,4:総合判定（確率NC
+#define PROBABILITY 0.6 //float
 
 #define SEND_INTERVAL 0.25
 
@@ -641,7 +641,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
                 judge_res=1;
                 break;
             case MODE_AFC:
-                judge_res=1;
+                judge_res=0;
                 break;
         }
     }
