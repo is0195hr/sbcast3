@@ -1778,9 +1778,17 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
             //同じ中身の確認
             int codesendeflag=0;
-            if(CODE_NUM==2) {
+            if(CODE_NUM == 2) {
                 for (int i = 0; i < sendcodecount[my_addr()]; i++) {
                     if (sendcodelog[my_addr()][i].pkt1 == ph->pkt1_ && sendcodelog[my_addr()][i].pkt2 == ph->pkt2_){
+                        codesendeflag=1;
+
+                    }
+                }
+            }
+            else if(CODE_NUM == 3){ //TODO:code3
+                for (int i = 0; i < sendcodecount[my_addr()]; i++) {
+                    if (sendcodelog[my_addr()][i].pkt1 == ph->pkt1_ && sendcodelog[my_addr()][i].pkt2 == ph->pkt2_ && sendcodelog[my_addr()][i].pkt3 == ph->pkt3_){
                         codesendeflag=1;
 
                     }
