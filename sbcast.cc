@@ -2104,7 +2104,7 @@ int SBAgent::createCodepacket3(int pkt_1, int pkt_2 , int pkt_3, int encode_coun
 	ph->pkttype_=PKT_CODED;
 	ch->ptype() = PT_SB;
 	ph->codenum_=3;
-	ph->codevc_=rand()%256+1;
+	ph->codevc_=rand()%GALOIS+1;
 	ph->pkt1_=pkt_1;
 	ph->pkt2_=pkt_2;
 	ph->pkt3_=pkt_3;
@@ -2136,7 +2136,9 @@ int SBAgent::createCodepacket3(int pkt_1, int pkt_2 , int pkt_3, int encode_coun
     }
     //遅延送信
     //Scheduler::instance().schedule(target_,p,0.01 * Random::uniform());
-	codepktnum++;
+    sendcodecount[my_addr()]++;
+
+    codepktnum++;
 
 }
 int SBAgent::createCodepacket4(int pkt_1, int pkt_2 , int pkt_3, int pkt_4, int encode_count) {
