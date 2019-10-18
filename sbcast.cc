@@ -3,7 +3,7 @@
 #include <time.h>
 #include "sbcast_output.h"
 
-#define CODE_NUM 2
+#define CODE_NUM 3
 
 #define BUF 1000
 
@@ -51,7 +51,7 @@
 #define MODE_NC 1
 #define MODE_AFC 2
 //切り替え用マクロ
-#define SIM_MODE 2
+#define SIM_MODE 1
 
 #define HENDOU 0.2 //float
 #define SEIKI 1.0 //float
@@ -2136,6 +2136,12 @@ int SBAgent::createCodepacket3(int pkt_1, int pkt_2 , int pkt_3, int encode_coun
     }
     //遅延送信
     //Scheduler::instance().schedule(target_,p,0.01 * Random::uniform());
+    sendcodelog[my_addr()][sendcodecount[my_addr()]].pkt1=ph->pkt1_;
+    sendcodelog[my_addr()][sendcodecount[my_addr()]].pkt2=ph->pkt2_;
+    sendcodelog[my_addr()][sendcodecount[my_addr()]].pkt3=ph->pkt3_;
+
+    sendcodelog[my_addr()][sendcodecount[my_addr()]].codevec=ph->codevc_;
+    sendcodelog[my_addr()][sendcodecount[my_addr()]].pktnumb=ph->pktnum_;
     sendcodecount[my_addr()]++;
 
     codepktnum++;
