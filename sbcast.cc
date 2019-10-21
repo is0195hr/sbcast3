@@ -3,7 +3,7 @@
 #include <time.h>
 #include "sbcast_output.h"
 
-#define CODE_NUM 2
+#define CODE_NUM 5
 
 #define BUF 1000
 
@@ -51,13 +51,13 @@
 #define MODE_NC 1
 #define MODE_AFC 2
 //切り替え用マクロ
-#define SIM_MODE 2
+#define SIM_MODE 1
 
 #define HENDOU 0.1 //float
 #define SEIKI 0.9 //float
 
 #define TRANSTH_TYPE 4//3:総合判定,4:総合判定（確率NC
-#define PROBABILITY 0.5 //float
+#define PROBABILITY 1.0 //0.5 //float
 
 #define SEND_INTERVAL 0.25
 
@@ -1814,7 +1814,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
                     collectNum[my_addr()] = 0;
                     //fprintf(mytraceFile, "rec\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pktnum_,ph->codevc_);
                 } else if (CODE_NUM == 5) {
-                    createCodepacket3(ph->pkt1_, ph->pkt2_, ph->pkt3_, ph->pkt4_, ph->pkt5_, ph->encode_count_);
+                    createCodepacket5(ph->pkt1_, ph->pkt2_, ph->pkt3_, ph->pkt4_, ph->pkt5_, ph->encode_count_);
                     mystatus[my_addr()] = STA_FL;
                     collectNum[my_addr()] = 0;
                     //fprintf(mytraceFile, "rec\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pktnum_,ph->codevc_);
