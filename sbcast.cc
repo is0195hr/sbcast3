@@ -1794,6 +1794,22 @@ void SBAgent::recv(Packet *p,Handler *h) {
                     }
                 }
             }
+            else if(CODE_NUM == 4){ //TODO:code3
+                for (int i = 0; i < sendcodecount[my_addr()]; i++) {
+                    if (sendcodelog[my_addr()][i].pkt1 == ph->pkt1_ && sendcodelog[my_addr()][i].pkt2 == ph->pkt2_ && sendcodelog[my_addr()][i].pkt3 == ph->pkt3_ && sendcodelog[my_addr()][i].pkt4 == ph->pkt4_){
+                        codesendeflag=1;
+
+                    }
+                }
+            }
+            else if(CODE_NUM == 5){ //TODO:code3
+                for (int i = 0; i < sendcodecount[my_addr()]; i++) {
+                    if (sendcodelog[my_addr()][i].pkt1 == ph->pkt1_ && sendcodelog[my_addr()][i].pkt2 == ph->pkt2_ && sendcodelog[my_addr()][i].pkt3 == ph->pkt3_ && sendcodelog[my_addr()][i].pkt4 == ph->pkt4_ && sendcodelog[my_addr()][i].pkt5 == ph->pkt5_){
+                        codesendeflag=1;
+
+                    }
+                }
+            }
            //これでいけるか？k
             //if(ph->encode_count_<CODE_NUM) {
             if(codesendeflag==0){
