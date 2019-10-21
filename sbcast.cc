@@ -3,7 +3,7 @@
 #include <time.h>
 #include "sbcast_output.h"
 
-#define CODE_NUM 3
+#define CODE_NUM 2
 
 #define BUF 1000
 
@@ -51,13 +51,13 @@
 #define MODE_NC 1
 #define MODE_AFC 2
 //切り替え用マクロ
-#define SIM_MODE 1
+#define SIM_MODE 2
 
-#define HENDOU 0.2 //float
-#define SEIKI 1.0 //float
+#define HENDOU 0.1 //float
+#define SEIKI 0.9 //float
 
-#define TRANSTH_TYPE 3//3:総合判定,4:総合判定（確率NC
-#define PROBABILITY 0.6 //float
+#define TRANSTH_TYPE 4//3:総合判定,4:総合判定（確率NC
+#define PROBABILITY 0.5 //float
 
 #define SEND_INTERVAL 0.25
 
@@ -1803,13 +1803,23 @@ void SBAgent::recv(Packet *p,Handler *h) {
                     collectNum[my_addr()] = 0;
                     //fprintf(mytraceFile, "fc\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pktnum_,ph->codevc_);
 
-
                 } else if (CODE_NUM == 3) {
                     createCodepacket3(ph->pkt1_, ph->pkt2_, ph->pkt3_, ph->encode_count_);
                     mystatus[my_addr()] = STA_FL;
                     collectNum[my_addr()] = 0;
                     //fprintf(mytraceFile, "rec\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pktnum_,ph->codevc_);
+                } else if (CODE_NUM == 4) {
+                    createCodepacket4(ph->pkt1_, ph->pkt2_, ph->pkt3_, ph->pkt4_, ph->encode_count_);
+                    mystatus[my_addr()] = STA_FL;
+                    collectNum[my_addr()] = 0;
+                    //fprintf(mytraceFile, "rec\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pktnum_,ph->codevc_);
+                } else if (CODE_NUM == 5) {
+                    createCodepacket3(ph->pkt1_, ph->pkt2_, ph->pkt3_, ph->pkt4_, ph->pkt5_, ph->encode_count_);
+                    mystatus[my_addr()] = STA_FL;
+                    collectNum[my_addr()] = 0;
+                    //fprintf(mytraceFile, "rec\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pktnum_,ph->codevc_);
                 }
+
 
             }
             else{
@@ -2044,7 +2054,8 @@ int SBAgent::createCodepacket2(int pkt_1, int pkt_2, int encode_count){
 
     ch->direction() = hdr_cmn::DOWN;
     ch->size() = IP_HDR_LEN;
-    ch->error() = 0;    ch->next_hop() = IP_BROADCAST;
+    ch->error() = 0;
+    ch->next_hop() = IP_BROADCAST;
     ch->addr_type() = NS_AF_INET;
 
     ih->saddr() = my_addr();
@@ -2161,7 +2172,7 @@ int SBAgent::createCodepacket4(int pkt_1, int pkt_2 , int pkt_3, int pkt_4, int 
 	ph->pkttype_=PKT_CODED;
 	ch->ptype() = PT_SB;
 	ph->codenum_=4;
-	ph->codevc_=rand()%256+1;
+	ph->codevc_=rand()%GALOIS+1;
 
 	ph->pkt1_=pkt_1;
 	ph->pkt2_=pkt_2;
@@ -2169,6 +2180,7 @@ int SBAgent::createCodepacket4(int pkt_1, int pkt_2 , int pkt_3, int pkt_4, int 
 	ph->pkt4_=pkt_4;
 	ph->pkt5_=-1;
     ph->hop_count_=1;
+
     ph->encode_count_=encode_count++;
 
 
@@ -2191,6 +2203,15 @@ int SBAgent::createCodepacket4(int pkt_1, int pkt_2 , int pkt_3, int pkt_4, int 
     if(Scheduler::instance().clock()>START_TIME && Scheduler::instance().clock()<=END_TIME) {
         send_packet_count++;
     }
+    sendcodelog[my_addr()][sendcodecount[my_addr()]].pkt1=ph->pkt1_;
+    sendcodelog[my_addr()][sendcodecount[my_addr()]].pkt2=ph->pkt2_;
+    sendcodelog[my_addr()][sendcodecount[my_addr()]].pkt3=ph->pkt3_;
+    sendcodelog[my_addr()][sendcodecount[my_addr()]].pkt4=ph->pkt4_;
+
+    sendcodelog[my_addr()][sendcodecount[my_addr()]].codevec=ph->codevc_;
+    sendcodelog[my_addr()][sendcodecount[my_addr()]].pktnumb=ph->pktnum_;
+    sendcodecount[my_addr()]++;
+    codepktnum++;
     //遅延送信
     //Scheduler::instance().schedule(target_,p,0.01 * Random::uniform());
 }
@@ -2238,6 +2259,16 @@ int SBAgent::createCodepacket5(int pkt_1, int pkt_2 , int pkt_3, int pkt_4, int 
     if(Scheduler::instance().clock()>START_TIME && Scheduler::instance().clock()<=END_TIME) {
         send_packet_count++;
     }
+    sendcodelog[my_addr()][sendcodecount[my_addr()]].pkt1=ph->pkt1_;
+    sendcodelog[my_addr()][sendcodecount[my_addr()]].pkt2=ph->pkt2_;
+    sendcodelog[my_addr()][sendcodecount[my_addr()]].pkt3=ph->pkt3_;
+    sendcodelog[my_addr()][sendcodecount[my_addr()]].pkt4=ph->pkt4_;
+    sendcodelog[my_addr()][sendcodecount[my_addr()]].pkt5=ph->pkt5_;
+
+    sendcodelog[my_addr()][sendcodecount[my_addr()]].codevec=ph->codevc_;
+    sendcodelog[my_addr()][sendcodecount[my_addr()]].pktnumb=ph->pktnum_;
+    sendcodecount[my_addr()]++;
+    codepktnum++;
     //遅延送信
     //Scheduler::instance().schedule(target_,p,0.01 * Random::uniform());
 }
