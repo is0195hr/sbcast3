@@ -51,7 +51,7 @@
 #define MODE_NC 1
 #define MODE_AFC 2
 //切り替え用マクロ
-#define SIM_MODE 1
+#define SIM_MODE 0
 
 #define HENDOU 0.1 //float
 #define SEIKI 0.9 //float
@@ -78,6 +78,10 @@ FILE * tempFile=fopen ("temp.csv","wt");
 FILE * temp2File=fopen ("temp2.csv","wt");
 FILE * temp3File=fopen ("temp3.csv","wt");
 FILE * calcFile=fopen ("calc.tr","wt");
+
+FILE * kakuninFile=fopen ("kakunin.tr","wt");
+FILE * kakunin1File=fopen ("kakunin1.tr","wt");
+FILE * kakunin2File=fopen ("kakunin2.tr","wt");
 
 
 
@@ -167,6 +171,27 @@ static int recvcodeFlag[BUF][BUF];
 static int recvreqlog[BUF][BUF];
 static int recvreplog[BUF][BUF];
 
+//上流用raw
+static int recvNormalUpstreamSender[BUF][BUF];//[myaddr][]
+static float recvNormalUpstreamTime[BUF][BUF];
+static int recvNormalUpstreamCount[BUF];
+
+//下流用raw
+static int recvNormalDownstreamSender[BUF][BUF];
+static float recvNormalDownstreamTime[BUF][BUF];
+static int recvNormalDownstreamCount[BUF];
+
+//上流用
+static int NormalUpstreamSender[BUF][BUF];//[myaddr][]
+static float NormalUpstreamTime[BUF][BUF];
+static int NormalUpstreamCount[BUF];
+
+//下流用
+static int NormalDownstreamSender[BUF][BUF];
+static float NormalDownstreamTime[BUF][BUF];
+static int NormalDownstreamCount[BUF];
+
+
 
 struct sendcodeinfo{
     int pktnumb;
@@ -253,7 +278,11 @@ void SBAgent::sendBeacon() {
                 sendcodelog[i][j].pkt4=-1;
                 sendcodelog[i][j].pkt5=-1;
                 sendcodelog[i][j].pktnumb=-1;
+                recvNormalUpstreamSender[i][j]=-1;
+                recvNormalUpstreamTime[i][j]=-1;
 
+                recvNormalDownstreamSender[i][j]=-1;
+                recvNormalDownstreamTime[i][j]=-1;
 
             }
             mystatus[i]=0;
@@ -264,6 +293,8 @@ void SBAgent::sendBeacon() {
             hitcount[i]=0;
             decodequeuecount[i]=0;
             sendcodecount[i]=-1;
+            recvNormalUpstreamCount[i]=-1;
+            recvNormalDownstreamCount[i]=-1;
         }
         syokika=1;
         all_rcv_ccount=0;
@@ -434,6 +465,48 @@ void SBAgent::recv(Packet *p,Handler *h) {
     //送信者と時刻を記録
     sender[my_addr()][sendercount[my_addr()]] = ph->addr();
     recvtime[my_addr()][sendercount[my_addr()]] = Scheduler::instance().clock();
+
+
+
+
+    //最初のパケットのみ記録（上流）
+    if(recvlog[my_addr()][ph->pktnum_] == 0){
+        recvNormalUpstreamCount[my_addr()]++;
+        recvNormalUpstreamSender[my_addr()][recvNormalUpstreamCount[my_addr()]] = ph->addr();
+        recvNormalUpstreamTime[my_addr()][recvNormalUpstreamCount[my_addr()]] = Scheduler::instance().clock();
+
+    }
+    else{//下流
+        recvNormalDownstreamCount[my_addr()]++;
+        recvNormalDownstreamSender[my_addr()][recvNormalDownstreamCount[my_addr()]] = ph->addr();
+        recvNormalDownstreamTime[my_addr()][recvNormalDownstreamCount[my_addr()]] = Scheduler::instance().clock();
+    }
+
+    //テスト用プリント
+    if(my_addr()==6) {
+        for (int i = 0; i <= sendercount[my_addr()]; i++) {
+            fprintf(kakuninFile, "%d ", sender[my_addr()][i]);
+        }
+        fprintf(kakuninFile, "\n");
+
+        if(recvlog[my_addr()][ph->pktnum_] == 0) {
+            for (int i = 0; i <= /*sendercount[my_addr()]*/recvNormalUpstreamCount[my_addr()]; i++) {
+                fprintf(kakunin1File, "%d ", recvNormalUpstreamSender[my_addr()][i]);
+            }
+            fprintf(kakunin1File, "\n");
+        }
+        else{
+            for (int i = 0; i <= /*sendercount[my_addr()]*/recvNormalDownstreamCount[my_addr()]; i++) {
+                fprintf(kakunin2File, "%d ", recvNormalDownstreamSender[my_addr()][i]);
+            }
+            fprintf(kakunin2File, "\n");
+        }
+    }
+    fflush(kakuninFile);
+    fflush(kakunin1File);
+    fflush(kakunin2File);
+
+
     //パケット種別に応じて重みづけ
     if(ph->pkttype_==PKT_NORMAL){
         packetweight[my_addr()][sendercount[my_addr()]]=1;
@@ -504,6 +577,57 @@ void SBAgent::recv(Packet *p,Handler *h) {
             //fprintf(stdout,"time:%f\n",recvtime[my_addr()][i]);
         }
     }
+    //上流、下流判定用
+    //区切り時間のエントリ番号を検索
+    int upstreamTimeEntry = 0;
+    int upstreamTimeCount = 0;
+
+    for (int i = recvNormalUpstreamCount[my_addr()]; recvNormalUpstreamTime[my_addr()][i]>= time_limit; i--){
+       // fprintf(stdout,"@@@@@@@@@@@@@@@@@@@@@@@@@%d %f %f\n",recvNormalUpstreamCount[my_addr()],
+       //         recvNormalUpstreamTime[my_addr()][i],time_limit);
+
+        upstreamTimeEntry = i;
+        upstreamTimeCount++;
+    }
+
+    //Upstreamノードと個数を求める
+    int upstreamNodeList[BUF];
+    int upstreamNodeListCount = 0;
+    int hitflag;
+    for(int i = recvNormalUpstreamCount[my_addr()]; i >= upstreamTimeEntry; i--){
+        fprintf(stdout,"--(%d)\n",i);
+        fprintf(stdout,"now list::");
+        for(int k=0;k<upstreamNodeListCount;k++){
+            fprintf(stdout,"%d ",upstreamNodeList[k]);
+        }
+        fprintf(stdout,"\n");
+        hitflag = 0;
+        for(int j = 0 ; j < upstreamNodeListCount; j++){
+            fprintf(stdout,"%d %d ",recvNormalUpstreamSender[my_addr()][i],upstreamNodeList[j]);
+            if(recvNormalUpstreamSender[my_addr()][i] == upstreamNodeList[j]){
+                fprintf(stdout,"break\n");
+                hitflag = 1;
+                break;
+            }
+            fprintf(stdout,"\n");
+        }
+        fprintf(stdout,"hitflag:%d\n",hitflag);
+        if(hitflag == 0){
+            fprintf(stdout,"countup:%d insert node:%d\n",upstreamNodeListCount,recvNormalUpstreamSender[my_addr()][i]);
+            //fprintf(stdout,"%d %d\n",upstreamNodeList[upstreamNodeListCount],recvNormalUpstreamSender[my_addr()][i]);
+            upstreamNodeList[upstreamNodeListCount] = recvNormalUpstreamSender[my_addr()][i];
+            upstreamNodeListCount++;
+        }
+    }
+    fprintf(stdout,"CCCCCCCCCCCCCCCCCCCCCCCCCC%d\n",upstreamNodeListCount);
+    if(my_addr()==6){
+        for(int i=0; i<=upstreamNodeListCount;i++) {
+            fprintf(kakunin1File, "%d ", upstreamNodeList[i]);
+        }
+        fprintf(kakunin1File,"\n");
+    }
+
+    //変動係数、送信頻度係数用
     int temp1,freq_max=0,freq_min=0;
     for(int i=0;i<NODE_NUM;i++) {//max,minを求める
         temp1=0;//ヒットしたかどうかのフラグも兼ねる
@@ -525,6 +649,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
             }
         }
     }
+
 
 
 
@@ -835,7 +960,11 @@ void SBAgent::recv(Packet *p,Handler *h) {
         fprintf(tpFile,"%f\t%d\t%d\t%f\t%d\t%d\n",Scheduler::instance().clock(),my_addr(),sender[my_addr()][sendercount[my_addr()]],neigh_topo,fl_count,nc_count);
 
     }
+    //履歴カウンタ
     sendercount[my_addr()]++;
+
+
+
     //ここここここ
 
     //ステータス決定
