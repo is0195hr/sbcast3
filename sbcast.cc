@@ -583,9 +583,6 @@ void SBAgent::recv(Packet *p,Handler *h) {
     int upstreamTimeCount = 0;
 
     for (int i = recvNormalUpstreamCount[my_addr()]; recvNormalUpstreamTime[my_addr()][i]>= time_limit; i--){
-       // fprintf(stdout,"@@@@@@@@@@@@@@@@@@@@@@@@@%d %f %f\n",recvNormalUpstreamCount[my_addr()],
-       //         recvNormalUpstreamTime[my_addr()][i],time_limit);
-
         upstreamTimeEntry = i;
         upstreamTimeCount++;
     }
@@ -595,37 +592,43 @@ void SBAgent::recv(Packet *p,Handler *h) {
     int upstreamNodeListCount = 0;
     int hitflag;
     for(int i = recvNormalUpstreamCount[my_addr()]; i >= upstreamTimeEntry; i--){
-        fprintf(stdout,"--(%d)\n",i);
-        fprintf(stdout,"now list::");
-        for(int k=0;k<upstreamNodeListCount;k++){
-            fprintf(stdout,"%d ",upstreamNodeList[k]);
-        }
-        fprintf(stdout,"\n");
         hitflag = 0;
         for(int j = 0 ; j < upstreamNodeListCount; j++){
-            fprintf(stdout,"%d %d ",recvNormalUpstreamSender[my_addr()][i],upstreamNodeList[j]);
             if(recvNormalUpstreamSender[my_addr()][i] == upstreamNodeList[j]){
-                fprintf(stdout,"break\n");
                 hitflag = 1;
                 break;
             }
-            fprintf(stdout,"\n");
         }
-        fprintf(stdout,"hitflag:%d\n",hitflag);
         if(hitflag == 0){
-            fprintf(stdout,"countup:%d insert node:%d\n",upstreamNodeListCount,recvNormalUpstreamSender[my_addr()][i]);
-            //fprintf(stdout,"%d %d\n",upstreamNodeList[upstreamNodeListCount],recvNormalUpstreamSender[my_addr()][i]);
+            //fprintf(stdout,"countup:%d insert node:%d\n",upstreamNodeListCount,recvNormalUpstreamSender[my_addr()][i]);
             upstreamNodeList[upstreamNodeListCount] = recvNormalUpstreamSender[my_addr()][i];
             upstreamNodeListCount++;
         }
     }
-    fprintf(stdout,"CCCCCCCCCCCCCCCCCCCCCCCCCC%d\n",upstreamNodeListCount);
+
+
+
+    //上流リスト表示
+    fprintf(stdout,"upstream list:");
+    for(int i=0;i<upstreamNodeListCount;i++){
+        fprintf(stdout,"%d ",upstreamNodeList[i]);
+    }
+    fprintf(stdout,"(%d/%d)\n",upstreamNodeListCount,neighbor_count);
+
     if(my_addr()==6){
-        for(int i=0; i<=upstreamNodeListCount;i++) {
+       /* for(int i=0; i<upstreamNodeListCount;i++) {
             fprintf(kakunin1File, "%d ", upstreamNodeList[i]);
         }
         fprintf(kakunin1File,"\n");
+*/
+        fprintf(kakunin1File,"upstream list:");
+        for(int i=0;i<upstreamNodeListCount;i++){
+            fprintf(kakunin1File,"%d ",upstreamNodeList[i]);
+        }
+        fprintf(kakunin1File,"(%d/%d)\n",upstreamNodeListCount,neighbor_count);
     }
+
+
 
     //変動係数、送信頻度係数用
     int temp1,freq_max=0,freq_min=0;
