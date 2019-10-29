@@ -4,7 +4,7 @@
 #include "sbcast_output.h"
 
 #define CODE_NUM 5
-
+// TODO N=4,5がまともにうごかない問題
 #define BUF 1000
 
 #define S 0
@@ -628,7 +628,38 @@ void SBAgent::recv(Packet *p,Handler *h) {
         fprintf(kakunin1File,"(%d/%d)\n",upstreamNodeListCount,neighbor_count);
     }
 
-
+    //上流リストと比較
+    //おいここが動かんぞ！
+    int downstreamNodeList[BUF];
+    int downstreamNodeListCount = 0;
+    int flag1=0, flag2=0;
+    for(int i=sendercount[my_addr()]; i > topocount[my_addr()]; i--) {
+        flag1 = 0;
+        flag2 = 0;
+        for (int j = 0; j <= upstreamNodeListCount; j++) {
+            if (upstreamNodeList[j] == sender[my_addr()][j]) {
+                flag1 = 1;
+                break;
+            }
+        }
+        if (flag1 == 0) {
+            for (int j = 0; j < downstreamNodeListCount; j++) {
+                if (sender[my_addr()][i] == downstreamNodeList[j]) {
+                    flag2 = 1;
+                }
+            }
+        }
+        if(flag1 == 0 && flag2 == 0) {
+            downstreamNodeList[downstreamNodeListCount] = sender[my_addr()][i];
+            downstreamNodeListCount++;
+        }
+    }
+    //下流リスト表示
+    fprintf(stdout,"downstream list:");
+    for(int i=0;i<downstreamNodeListCount;i++){
+        fprintf(stdout,"%d ",downstreamNodeList[i]);
+    }
+    fprintf(stdout,"(%d/%d)\n",downstreamNodeListCount,neighbor_count);
 
     //変動係数、送信頻度係数用
     int temp1,freq_max=0,freq_min=0;
