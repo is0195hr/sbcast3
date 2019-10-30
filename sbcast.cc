@@ -82,6 +82,8 @@ FILE * calcFile=fopen ("calc.tr","wt");
 FILE * kakuninFile=fopen ("kakunin.tr","wt");
 FILE * kakunin1File=fopen ("kakunin1.tr","wt");
 FILE * kakunin2File=fopen ("kakunin2.tr","wt");
+FILE * kakunin3File=fopen ("kakunin3.tr","wt");
+FILE * kakunin4File=fopen ("kakunin4.tr","wt");
 
 
 
@@ -181,17 +183,20 @@ static int recvNormalDownstreamSender[BUF][BUF];
 static float recvNormalDownstreamTime[BUF][BUF];
 static int recvNormalDownstreamCount[BUF];
 
-//上流用
+//1stパケットのみの履歴
 static int NormalUpstreamSender[BUF][BUF];//[myaddr][]
 static float NormalUpstreamTime[BUF][BUF];
 static int NormalUpstreamCount[BUF];
 
-//下流用
+//2nd以降パケットのみの履歴
 static int NormalDownstreamSender[BUF][BUF];
 static float NormalDownstreamTime[BUF][BUF];
 static int NormalDownstreamCount[BUF];
 
-
+//下流リストにしたがったsender履歴
+static int DownstreamSender[BUF][BUF];
+static float DownstreamTime[BUF][BUF];
+static int DownstreamCount[BUF];
 
 struct sendcodeinfo{
     int pktnumb;
@@ -284,6 +289,9 @@ void SBAgent::sendBeacon() {
                 recvNormalDownstreamSender[i][j]=-1;
                 recvNormalDownstreamTime[i][j]=-1;
 
+                DownstreamSender[i][j]=-1;
+                DownstreamTime[i][j]=-1;
+
             }
             mystatus[i]=0;
             collectNum[i]=0;
@@ -295,6 +303,7 @@ void SBAgent::sendBeacon() {
             sendcodecount[i]=-1;
             recvNormalUpstreamCount[i]=-1;
             recvNormalDownstreamCount[i]=-1;
+            DownstreamCount[i]=-1;
         }
         syokika=1;
         all_rcv_ccount=0;
@@ -660,8 +669,35 @@ void SBAgent::recv(Packet *p,Handler *h) {
     }
     fprintf(stdout,"(%d/%d)\n",downstreamNodeListCount,neighbor_count);
 
+    //senderから上流ノードを排除した履歴の作成
+    int flag3=0;
+    for(int i = 0; i<sendercount[my_addr()];i++){
+        for(int j = 0; j < downstreamNodeListCount; j++) {
+            if (sender[my_addr()][i] == downstreamNodeList[j]){
+                flag3=1;
+            }
+        }
+        if(flag3==0){
+            DownstreamSender[my_addr()][DownstreamCount[my_addr()]]=sender[my_addr()][i];
+            DownstreamTime[my_addr()][DownstreamCount[my_addr()]]=recvtime[my_addr()][i];
+            DownstreamCount[my_addr()]++;
+        }
+        flag3=0;
+    }
 
+    if(my_addr()==6) {
+        for (int i = 0; i < sendercount[my_addr()]; i++) {
+            fprintf(kakunin3File, "%d,%f\n", sender[my_addr()][i], recvtime[my_addr()][i]);
+        }
 
+        for (int i = 0; i < DownstreamCount[my_addr()]; i++) {
+            for (int j = 0; j < downstreamNodeListCount; j++) {
+                fprintf(kakunin4File, "%d ", downstreamNodeList[j]);
+            }
+            fprintf(kakunin4File, ",");
+            fprintf(kakunin4File, "%d,%f\n", DownstreamSender[my_addr()][i], DownstreamTime[my_addr()][i]);
+        }
+    }
 
     //変動係数、送信頻度係数用
     int temp1,freq_max=0,freq_min=0;
