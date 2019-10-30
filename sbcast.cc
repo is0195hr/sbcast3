@@ -25,7 +25,7 @@
 
 
 #define SWITCH_TH 0.3  //float
-#define TIME_TH 20.0    //float
+#define TIME_TH 1.0    //float
 #define NEIGHBOR_TH 2  //int
 
 #define NODE_NUM 150//18
@@ -629,15 +629,14 @@ void SBAgent::recv(Packet *p,Handler *h) {
     }
 
     //上流リストと比較
-    //おいここが動かんぞ！
     int downstreamNodeList[BUF];
     int downstreamNodeListCount = 0;
     int flag1=0, flag2=0;
     for(int i=sendercount[my_addr()]; i > topocount[my_addr()]; i--) {
         flag1 = 0;
         flag2 = 0;
-        for (int j = 0; j <= upstreamNodeListCount; j++) {
-            if (upstreamNodeList[j] == sender[my_addr()][j]) {
+        for (int j = 0; j < upstreamNodeListCount; j++) {
+            if (upstreamNodeList[j] == sender[my_addr()][i]) {
                 flag1 = 1;
                 break;
             }
@@ -661,6 +660,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
     }
     fprintf(stdout,"(%d/%d)\n",downstreamNodeListCount,neighbor_count);
 
+
+
+
     //変動係数、送信頻度係数用
     int temp1,freq_max=0,freq_min=0;
     for(int i=0;i<NODE_NUM;i++) {//max,minを求める
@@ -669,7 +671,6 @@ void SBAgent::recv(Packet *p,Handler *h) {
             if (sender[my_addr()][j] == i) {
                 temp1++;
             }
-
         }
         if(temp1!=0){//ヒットがあれば
             if(freq_max<=temp1){
@@ -683,6 +684,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
             }
         }
     }
+
 
 
 
