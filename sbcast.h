@@ -9,6 +9,7 @@
 #include "ip.h"
 #include "packet.h"
 #include "cmu-trace.h"
+#include "sbcast_output.h"
 
 
 

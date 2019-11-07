@@ -11,4 +11,5 @@
 int test(int, int);
 int test2(char, int);
 
+int printTrace();
 
