@@ -661,12 +661,49 @@ void SBAgent::recv(Packet *p,Handler *h) {
     }
 
 
+
+
     //下流リスト表示
     fprintf(stdout,"downstream list:");
     for(int i=0;i<downstreamNodeListCount;i++){
         fprintf(stdout,"%d ",downstreamNodeList[i]);
     }
     fprintf(stdout,"(%d/%d)\n",downstreamNodeListCount,neighbor_count);
+
+
+
+    //下流ノードリスト２(テスト)
+    int downstreamTimeEntry2 = 0;
+    int downstreamTimeCount2 = 0;
+    for (int i = recvNormalDownstreamCount[my_addr()]; recvNormalDownstreamTime[my_addr()][i]>= time_limit; i--){
+        downstreamTimeEntry2 = i;
+        downstreamTimeCount2++;
+    }
+
+    int downstreamNodeList2[BUF];
+    int downstreamNodeListCount2 = 0;
+    int dhitflag=0;
+    //Downstreamノードと個数を求める22222
+    for(int i = recvNormalDownstreamCount[my_addr()]; i >= downstreamTimeEntry2; i--){
+        dhitflag=0;
+        for(int j = 0 ; j < downstreamNodeListCount2; j++){
+            if(recvNormalDownstreamSender[my_addr()][i] == downstreamNodeList2[j]){
+                dhitflag = 1;
+                break;
+            }
+        }
+        if(dhitflag == 0){
+            //fprintf(stdout,"countup:%d insert node:%d\n",upstreamNodeListCount,recvNormalUpstreamSender[my_addr()][i]);
+            downstreamNodeList2[downstreamNodeListCount2] = recvNormalDownstreamSender[my_addr()][i];
+            downstreamNodeListCount2++;
+        }
+    }
+    fprintf(stdout,"downstream list2:");
+    for(int i=0;i<downstreamNodeListCount2;i++){
+        fprintf(stdout,"%d ",downstreamNodeList2[i]);
+    }
+    fprintf(stdout,"(%d/%d)\n",downstreamNodeListCount2,neighbor_count);
+    //下流ノードリスト２（テスト）ここまで
 
     //senderから上流ノードを排除した履歴の作成
     DownstreamCount[my_addr()]=-1;
@@ -689,7 +726,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
         downstreamTimeCount++;
         fprintf(stdout,"P");
     }
-    fprintf(stdout,"dTE:%d dTC:%d\n",downstreamTimeEntry,downstreamTimeCount);
+    fprintf(stdout,"dTET:%f dTE:%d dTC:%d\n",time_limit,downstreamTimeEntry,downstreamTimeCount);
 
     if(my_addr()==6) {
         fprintf(kakunin4File, "sender:");
