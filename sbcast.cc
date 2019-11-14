@@ -704,6 +704,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
     }
     fprintf(stdout,"(%d/%d)\n",downstreamNodeListCount2,neighbor_count);
     //下流ノードリスト２（テスト）ここまで
+    //これだと全ノードになってしまう
 
     //senderから上流ノードを排除した履歴の作成
     DownstreamCount[my_addr()]=-1;
@@ -756,25 +757,31 @@ void SBAgent::recv(Packet *p,Handler *h) {
     }
 
     //下流リストによる変動係数
-    fprintf(stdout,"%d\n",downstreamNodeListCount);
+    fprintf(stdout,"d_count:%d\n",downstreamNodeListCount);
 
     float down_avg = 0;
     if(downstreamNodeListCount!=0) {
         down_avg = (float) downstreamTimeCount / (float) downstreamNodeListCount;
     }
-    fprintf(stdout,"%f,%f\n",down_avg,(float)downstreamNodeListCount);
+    fprintf(stdout,"d_avg:%f d_count:%f\n",down_avg,(float)downstreamNodeListCount);
     //送信回数maxとminを求める
     float down_bunsan_sum=0;
     for(int i = 0,hittemp=0; i < NODE_NUM; i++){
-        for (int j = downstreamTimeCount; j >= downstreamTimeEntry; j--) {
+        fprintf(stdout,"%d %d\n",downstreamTimeCount,downstreamTimeEntry);
+        for (int j = downstreamTimeCount; j >= downstreamTimeEntry; j--) {//TODO:ここがちがう
+            fprintf(stdout,"i:%d node:%d ",i,downstreamNodeList[j]);
             if (downstreamNodeList[j] == i) {
                 hittemp++;
             }
         }
         if(hittemp!=0){//ヒットがあれば
+            fprintf(stdout,"hitaru\n");
             float hensa = (float)hittemp - (float)down_avg;
             float bunsan_temp = hensa * hensa;
             down_bunsan_sum = down_bunsan_sum + bunsan_temp;
+        }
+        else{
+            fprintf(stdout,"nohit\n");
         }
     }
     float down_bunsan = 0;
@@ -782,10 +789,11 @@ void SBAgent::recv(Packet *p,Handler *h) {
         down_bunsan = down_bunsan_sum / (float)downstreamNodeListCount;
     }
 
-    float down_hendou=0;
+    float down_hendou=-1;
     if(down_avg!=0) {
         down_hendou = sqrt(down_bunsan) / down_avg;
     }
+
 
     //ここまで変更中
     //TODO ここの妥当性を確認して
