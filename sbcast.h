@@ -78,6 +78,8 @@ public:
     int createReqpacket1(int,int);
     int createReqpacket2(int, int,int);
     int createReplypacket(int,int,int);
+    int getArrayFirstEntry(int[],int);
+    int getArrayNum(int[], int, int);
 
     inline nsaddr_t & my_addr() { return my_addr_;}
 };

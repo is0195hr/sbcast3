@@ -84,6 +84,10 @@ FILE * kakunin1File=fopen ("kakunin1.tr","wt");
 FILE * kakunin2File=fopen ("kakunin2.tr","wt");
 FILE * kakunin3File=fopen ("kakunin3.tr","wt");
 FILE * kakunin4File=fopen ("kakunin4.tr","wt");
+FILE * kakunin5File=fopen ("kakunin5.tr","wt");
+FILE * errorFile=fopen ("error.tr","wt");
+FILE * hendouFile=fopen ("hendou.tr","wt");
+
 
 
 
@@ -637,6 +641,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
     //上流リストと比較
     int downstreamNodeList[BUF];
     int downstreamNodeListCount = 0;
+    for(int i=0;i<BUF;i++){
+        downstreamNodeList[i]=-1;
+    }
     int flag1=0, flag2=0;
     for(int i=sendercount[my_addr()]; i > topocount[my_addr()]; i--) {
         flag1 = 0;
@@ -673,6 +680,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
 
     //下流ノードリスト２(テスト)
+    /*
     int downstreamTimeEntry2 = 0;
     int downstreamTimeCount2 = 0;
     for (int i = recvNormalDownstreamCount[my_addr()]; recvNormalDownstreamTime[my_addr()][i]>= time_limit; i--){
@@ -703,6 +711,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
         fprintf(stdout,"%d ",downstreamNodeList2[i]);
     }
     fprintf(stdout,"(%d/%d)\n",downstreamNodeListCount2,neighbor_count);
+     */
     //下流ノードリスト２（テスト）ここまで
     //これだと全ノードになってしまう
 
@@ -720,7 +729,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
     }
     //下流履歴の区切りエントリを検索
     int downstreamTimeEntry=0;
-    int downstreamTimeCount=0;
+    int downstreamTimeCount=0;//こいつは個数
     fprintf(stdout,"%d %f %f\n",DownstreamCount[my_addr()],DownstreamTime[my_addr()][DownstreamCount[my_addr()]],time_limit);
     for (int i = DownstreamCount[my_addr()]; DownstreamTime[my_addr()][i]>= time_limit; i--){
         downstreamTimeEntry = i;
@@ -756,6 +765,8 @@ void SBAgent::recv(Packet *p,Handler *h) {
         fprintf(kakunin4File,"\n\n");
     }
 
+    fprintf(kakunin5File,"nowconter:%d\n",getArrayFirstEntry(downstreamNodeList,-1));
+    fprintf(kakunin5File,"sedcount:%d\n",downstreamNodeListCount);
     //下流リストによる変動係数
     fprintf(stdout,"d_count:%d\n",downstreamNodeListCount);
 
@@ -763,41 +774,72 @@ void SBAgent::recv(Packet *p,Handler *h) {
     if(downstreamNodeListCount!=0) {
         down_avg = (float) downstreamTimeCount / (float) downstreamNodeListCount;
     }
+    else{
+        fprintf(stdout,"downstreamNodeListCount is zero. Skipping calc down_avg\n");
+    }
     fprintf(stdout,"d_avg:%f d_count:%f\n",down_avg,(float)downstreamNodeListCount);
+    int asada=0;
+    fprintf(kakunin5File,"-----node:%d-----\n",my_addr());
+    fprintf(kakunin5File,"[");
+    for(int i=0; i<downstreamNodeListCount;i++){
+        fprintf(kakunin5File,"%d ",downstreamNodeList[i]);
+    }
+    fprintf(kakunin5File,"]\n");
+    for(int i=DownstreamCount[my_addr()]; i>=downstreamTimeEntry;i--){
+        fprintf(kakunin5File,"%d ",DownstreamSender[my_addr()][i]);
+    }
+    fprintf(kakunin5File,"\n");
+
     //送信回数maxとminを求める
     float down_bunsan_sum=0;
-    for(int i = 0,hittemp=0; i < NODE_NUM; i++){
-        fprintf(stdout,"%d %d\n",downstreamTimeCount,downstreamTimeEntry);
-        for (int j = downstreamTimeCount; j >= downstreamTimeEntry; j--) {//TODO:ここがちがう
-            fprintf(stdout,"i:%d node:%d ",i,downstreamNodeList[j]);
-            if (downstreamNodeList[j] == i) {
+
+    for(int i = 0; i< downstreamNodeListCount;i++){
+        int hittemp=0;
+        for(int j = DownstreamCount[my_addr()]; j>= downstreamTimeEntry; j-- ){
+            if(downstreamNodeList[i]==DownstreamSender[my_addr()][j]){
                 hittemp++;
             }
         }
+
+        fprintf(kakunin5File,"calc node:%d hit:%d\n",downstreamNodeList[i],hittemp);
         if(hittemp!=0){//ヒットがあれば
-            fprintf(stdout,"hitaru\n");
             float hensa = (float)hittemp - (float)down_avg;
             float bunsan_temp = hensa * hensa;
             down_bunsan_sum = down_bunsan_sum + bunsan_temp;
+            asada++;
         }
-        else{
-            fprintf(stdout,"nohit\n");
-        }
+
+
     }
+
     float down_bunsan = 0;
     if(downstreamNodeListCount!=0){
-        down_bunsan = down_bunsan_sum / (float)downstreamNodeListCount;
+        down_bunsan = down_bunsan_sum / (float)downstreamNodeListCount;//timecount?
+    }
+    else{
+        fprintf(stdout,"downstreamNodeListCount is zero. Skipping calc down_bunsan\n");
     }
 
     float down_hendou=-1;
     if(down_avg!=0) {
         down_hendou = sqrt(down_bunsan) / down_avg;
     }
+    else{
+        fprintf(stdout,"don_avg is zero. Skipping calc down_hendou\n");
+    }
 
+
+    fprintf(kakunin5File,"down_bunsan_sum:%f\n",down_bunsan_sum);
+    fprintf(kakunin5File,"down_bunsan:%f\n",down_bunsan);
+    fprintf(kakunin5File,"down_avg:%f\n",down_avg);
+    fprintf(kakunin5File,"down_hendou:%f\n",down_hendou);
+    if(down_hendou!=-1) {
+        fprintf(hendouFile, "%f\n", down_hendou);
+    }
 
     //ここまで変更中
     //TODO ここの妥当性を確認して
-    fprintf(stdout, "hendou:%f bunsan: %f  = %f / %f", down_hendou,down_bunsan,down_bunsan_sum,downstreamNodeListCount);
+    fprintf(stdout, "hendou:%f bunsan: %f  = %f / %d %d %d\n", down_hendou,down_bunsan,down_bunsan_sum,downstreamNodeListCount,asada,downstreamTimeCount);
 
     //変動係数、送信頻度係数用
     int temp1,freq_max=0,freq_min=0;
@@ -2841,3 +2883,28 @@ void SBAgent::printRes(){
     }
 
 }
+
+//void SBAgent::printRes(){
+int SBAgent::getArrayFirstEntry(int array[], int init){
+    int counter=0;
+    for (int i = 0; i < BUF; i++) {
+        if (array[i]!=init){
+            counter=i;
+        }
+    }
+    return counter;
+}
+/*
+int SBAgent::getArrayNum(int array[], int start, int end){
+    int counter=0;
+    for (int i = 0; i < BUF; i++) {
+        if (array[i]!=init){
+            counter=i;
+        }
+    }
+    return counter;
+}
+
+int SBAgent::getTimeNum(){
+
+}*/
