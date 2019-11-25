@@ -25,7 +25,7 @@
 
 
 #define SWITCH_TH 0.3  //float
-#define TIME_TH 1.0    //float
+#define TIME_TH 5.0    //float
 #define NEIGHBOR_TH 2  //int
 
 #define NODE_NUM 150//18
@@ -53,7 +53,7 @@
 //切り替え用マクロ
 #define SIM_MODE 2
 
-#define HENDOU 0.3 //float
+#define HENDOU 0.4 //float
 #define SEIKI 0.3 //float
 
 #define TRANSTH_TYPE 3//3:総合判定,4:総合判定（確率NC
@@ -480,19 +480,19 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
 
 
+    if(ph->pkttype_ == PKT_NORMAL) {
+        //最初のパケットのみ記録（上流）
+        if (recvlog[my_addr()][ph->pktnum_] == 0) {
+            recvNormalUpstreamCount[my_addr()]++;
+            recvNormalUpstreamSender[my_addr()][recvNormalUpstreamCount[my_addr()]] = ph->addr();
+            recvNormalUpstreamTime[my_addr()][recvNormalUpstreamCount[my_addr()]] = Scheduler::instance().clock();
 
-    //最初のパケットのみ記録（上流）
-    if (recvlog[my_addr()][ph->pktnum_] == 0) {
-        recvNormalUpstreamCount[my_addr()]++;
-        recvNormalUpstreamSender[my_addr()][recvNormalUpstreamCount[my_addr()]] = ph->addr();
-        recvNormalUpstreamTime[my_addr()][recvNormalUpstreamCount[my_addr()]] = Scheduler::instance().clock();
-
-    } else {//下流
-        recvNormalDownstreamCount[my_addr()]++;
-        recvNormalDownstreamSender[my_addr()][recvNormalDownstreamCount[my_addr()]] = ph->addr();
-        recvNormalDownstreamTime[my_addr()][recvNormalDownstreamCount[my_addr()]] = Scheduler::instance().clock();
+        } else {//下流
+            recvNormalDownstreamCount[my_addr()]++;
+            recvNormalDownstreamSender[my_addr()][recvNormalDownstreamCount[my_addr()]] = ph->addr();
+            recvNormalDownstreamTime[my_addr()][recvNormalDownstreamCount[my_addr()]] = Scheduler::instance().clock();
+        }
     }
-
     //テスト用プリント
     if (my_addr() == 6) {
         for (int i = 0; i <= sendercount[my_addr()]; i++) {
@@ -673,7 +673,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
     }
     fprintf(stdout, "(%d/%d)\n", downstreamNodeListCount, neighbor_count);
 
-
+    if(neighbor_count<=1){
+        fprintf(errorFile,"%f node:%d neighbor is low(%d)\n",Scheduler::instance().clock(),my_addr(),neighbor_count);
+    }
 
     //下流ノードリスト２(テスト)
     /*
@@ -818,8 +820,6 @@ void SBAgent::recv(Packet *p,Handler *h) {
             down_bunsan_sum = down_bunsan_sum + bunsan_temp;
             asada++;
         }
-
-
     }
 
     float down_bunsan = 0;
@@ -974,39 +974,40 @@ void SBAgent::recv(Packet *p,Handler *h) {
         fprintf(fp,"d,");
     }
 
-    //seiki+変動係数
-    //パラメータ
+    //下流ノードによる変動係数のみの判定
+    int isJudge=0;
     int judge_res=0;//static=1,dynamic=0;
     //float hendou=sqrt(bunsan)/neigh_freq;
     float hendou = down_hendou;
-    if(hendou<=HENDOU){
-        fprintf(fp,"s\n");
-        judge_res=1;//teian=1
-        switch (SIM_MODE){
+    //下流ノード数による判定するかの判定
+    if (hendou <= HENDOU) {
+        fprintf(fp, "s\n");
+        judge_res = 1;//teian=1
+        switch (SIM_MODE) {
             case MODE_FL:
-                judge_res=0;
+                judge_res = 0;
                 break;
             case MODE_NC:
-                judge_res=1;
+                judge_res = 1;
                 break;
             case MODE_AFC:
-                judge_res=1;
+                judge_res = 1;
+                break;
+        }
+    } else {
+        switch (SIM_MODE) {
+            case MODE_FL:
+                judge_res = 0;
+                break;
+            case MODE_NC:
+                judge_res = 1;
+                break;
+            case MODE_AFC:
+                judge_res = 0;
                 break;
         }
     }
-    else{
-        switch (SIM_MODE){
-            case MODE_FL:
-                judge_res=0;
-                break;
-            case MODE_NC:
-                judge_res=1;
-                break;
-            case MODE_AFC:
-                judge_res=0;
-                break;
-        }
-    }
+
     //前回までの
    /* if(hendou<=HENDOU){
         fprintf(fp,"s\n");
@@ -1315,12 +1316,17 @@ void SBAgent::recv(Packet *p,Handler *h) {
             else if(judge_res==1){
                 //if(rand()%2==0)
                 mystatus[my_addr()]=STA_CODEWAIT;
+                //下流ノードが少ない場合は強制フラッディング
+                if(downstreamNodeListCount<=1){
+                   // mystatus[my_addr()]==STA_FL;
+                }
             }
             else{
                 fprintf(mytraceFile,"err define my status\n");
                 return;
             }
         }
+
     }
     else if(TRANSTH_TYPE==4){//確率補正NC
         //隣接ノードの判定総合結果による自分のステータス決定
