@@ -2,10 +2,10 @@
 #include <random.h>
 #include <time.h>
 #include "sbcast_output.h"
-
+#include <mobilenode.h>
 #define CODE_NUM 2
 // TODO N=4,5がまともにうごかない問題
-#define BUF 1000
+#define BUF 3500
 
 #define S 0
 #define R 1
@@ -22,13 +22,11 @@
 #define STA_CODESENDREADY 2
 #define STA_HYBRID 3
 
-
-
 #define SWITCH_TH 0.3  //float
 #define TIME_TH 5.0    //float
 #define NEIGHBOR_TH 2  //int
 
-#define NODE_NUM 150//18
+#define NODE_NUM 400//18
 #define GALOIS 256
 #define DELAY 1.0
 #define MAX_PACKET 750
@@ -51,7 +49,7 @@
 #define MODE_NC 1
 #define MODE_AFC 2
 //切り替え用マクロ
-#define SIM_MODE 2
+#define SIM_MODE 0
 
 #define HENDOU 0.4 //float
 #define SEIKI 0.3 //float
@@ -325,6 +323,7 @@ void SBAgent::sendBeacon() {
         int seed = rand()%256+1;
         Random::seed(seed);
 
+
         //mytraceprint
         fprintf(mytraceFile,"**************************************************\n");
         fprintf(mytraceFile,"%s",ctime(&t));
@@ -460,6 +459,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
     fprintf(stdout, "-----------node:%d rcv Start--------------------------\n", my_addr());
     fprintf(stdout, "r time:%f, type:%d,  num:%d, sender:%d\n", Scheduler::instance().clock(), ph->pkttype_,
             ph->pktnum_, ph->addr());
+    //fprintf(stdout,"%f\n",MobileNode::MobileNode().X_);
     //送信ノードと自分自身のパケットは破棄
     if (ph->addr() == my_addr() || my_addr() == 0) {
         return;
@@ -622,11 +622,6 @@ void SBAgent::recv(Packet *p,Handler *h) {
     fprintf(stdout, "(%d/%d)\n", upstreamNodeListCount, neighbor_count);
 
     if (my_addr() == 6) {
-        /* for(int i=0; i<upstreamNodeListCount;i++) {
-             fprintf(kakunin1File, "%d ", upstreamNodeList[i]);
-         }
-         fprintf(kakunin1File,"\n");
-     */
         fprintf(kakunin1File, "upstream list:");
         for (int i = 0; i < upstreamNodeListCount; i++) {
             fprintf(kakunin1File, "%d ", upstreamNodeList[i]);
@@ -855,7 +850,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
     //変動係数、送信頻度係数用
     int temp1,freq_max=0,freq_min=0;
-    for(int i=0;i<NODE_NUM;i++) {//max,minを求める
+   /* for(int i=0;i<NODE_NUM;i++) {//max,minを求める
         temp1=0;//ヒットしたかどうかのフラグも兼ねる
         for (int j = sendercount[my_addr()]; j >= topocount[my_addr()]; j--) {
             if (sender[my_addr()][j] == i) {
@@ -873,12 +868,12 @@ void SBAgent::recv(Packet *p,Handler *h) {
                 freq_min=temp1;
             }
         }
-    }
+    }*/
 
 
 
 
-    float neigh_freq=0;
+/*    float neigh_freq=0;
     neigh_freq = (float)bunbo/(float)neighbor_count;//平均,エントリ数をノード数で除算
     float bunsan=0,bunsan_sum=0;
     for(int i=0;i<NODE_NUM;i++){//分散を求める
@@ -972,7 +967,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
     }
     else{
         fprintf(fp,"d,");
-    }
+    }*/
 
     //下流ノードによる変動係数のみの判定
     int isJudge=0;
@@ -981,7 +976,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
     float hendou = down_hendou;
     //下流ノード数による判定するかの判定
     if (hendou <= HENDOU) {
-        fprintf(fp, "s\n");
+//        fprintf(fp, "s\n");
         judge_res = 1;//teian=1
         switch (SIM_MODE) {
             case MODE_FL:
@@ -1061,7 +1056,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
 
 
-    float topo_all, topo_latest;
+/*    float topo_all, topo_latest;
     topo_all = (float) hitcount[my_addr()] / (float) bunbo;
     fprintf(stdout, "topo_all:%f (%d/%d)\n", topo_all, hitcount[my_addr()], bunbo);
     fprintf(stdout, "hit:%d\n", hitcount[my_addr()]);
@@ -1116,7 +1111,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
     //fprintf(mytraceFile,"neigNUM\tnode:%d\tnei:%d\n",my_addr(),neighbor_count);
     //隣接ノードの状況把握
     //自ノードはノード1つずつ履歴を確認していく
-    int fl_count = 0, nc_count = 0;
+/*    int fl_count = 0, nc_count = 0;
     float neigh_topo=0;
 
     //一度受信したパケットは調査しない
@@ -1213,11 +1208,12 @@ void SBAgent::recv(Packet *p,Handler *h) {
         //fprintf(tpFile,"node:%d\tfl_count:%d\tnc_count:%d\tNei_topo:%f\tgoukei:%f\n",my_addr(),fl_count,nc_count,neigh_topo,goukei_topo);
         fprintf(tpFile,"%f\t%d\t%d\t%f\t%d\t%d\n",Scheduler::instance().clock(),my_addr(),sender[my_addr()][sendercount[my_addr()]],neigh_topo,fl_count,nc_count);
 
-    }
+    }*/
     //履歴カウンタ
     sendercount[my_addr()]++;
 
-
+    float goukei_topo=0, neigh_topo=0;
+    int nc_count=0, fl_count=0,neigh_freq=0;
 
     //ここここここ
 
