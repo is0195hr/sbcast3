@@ -49,9 +49,9 @@
 #define MODE_NC 1
 #define MODE_AFC 2
 //切り替え用マクロ
-#define SIM_MODE 0
+#define SIM_MODE 2
 
-#define HENDOU 0.4 //float
+#define HENDOU 0.7 //float
 #define SEIKI 0.3 //float
 
 #define TRANSTH_TYPE 3//3:総合判定,4:総合判定（確率NC
@@ -59,6 +59,7 @@
 
 #define SEND_INTERVAL 0.25
 
+#define LOG_LV 0
 
 
 FILE * mytraceFile=fopen ("mytrace.tr","wt");
@@ -452,13 +453,30 @@ void SBAgent::recv(Packet *p,Handler *h) {
     //fflush(recvcodehistoryFile);
     //fflush(recvlogFile);
 
+    static float printtime=0;
+    static int printcount=0;
+    if(printtime < Scheduler::instance().clock()) {
+        fprintf(stdout, "Progress:%.1f%\n",Scheduler::instance().clock()/60.0*100);
+        /*if(((int)Scheduler::instance().clock()/60*100)%5 == 0){
+            printcount++;
+        }
+        for(int i=0;i<=printcount;i++){
+            fprintf(stdout,"■ ");
+        }
+        for(int i=0;i<=(20-printcount);i++){
+            fprintf(stdout,"□ ");
+        }
+        fprintf(stdout,"\n");*/
 
-
+        printtime= printtime + 1.0;
+    }
 
     //全パケット共通動作
-    fprintf(stdout, "-----------node:%d rcv Start--------------------------\n", my_addr());
-    fprintf(stdout, "r time:%f, type:%d,  num:%d, sender:%d\n", Scheduler::instance().clock(), ph->pkttype_,
-            ph->pktnum_, ph->addr());
+    if(LOG_LV>=1) {
+        fprintf(stdout, "-----------node:%d rcv Start--------------------------\n", my_addr());
+        fprintf(stdout, "r time:%f, type:%d,  num:%d, sender:%d\n", Scheduler::instance().clock(), ph->pkttype_,
+                ph->pktnum_, ph->addr());
+    }
     //fprintf(stdout,"%f\n",MobileNode::MobileNode().X_);
     //送信ノードと自分自身のパケットは破棄
     if (ph->addr() == my_addr() || my_addr() == 0) {
@@ -552,17 +570,19 @@ void SBAgent::recv(Packet *p,Handler *h) {
     if (time_limit < 0) {
         time_limit = 0;
     }
-    fprintf(stdout, "%f - TH = time lim:%f\n", recvtime[my_addr()][sendercount[my_addr()]], time_limit);
-
-    for (int i = 0; i < 10; i++) {
-        fprintf(stdout, "%d ", sender[my_addr()][i]);
+    if(LOG_LV>=1) {
+        fprintf(stdout, "%f - TH = time lim:%f\n", recvtime[my_addr()][sendercount[my_addr()]], time_limit);
+        for (int i = 0; i < 10; i++) {
+            fprintf(stdout, "%d ", sender[my_addr()][i]);
+        }
+        fprintf(stdout, "\n");
     }
-    fprintf(stdout, "\n");
-
     topocount[my_addr()] = 0;
     int bunbo = 0;
-    fprintf(stdout, "sender:%d sendercount:%d recvtime:%f\n", sender[my_addr()][sendercount[my_addr()]],
-            sendercount[my_addr()], recvtime[my_addr()][sendercount[my_addr()]]);
+    if(LOG_LV>=1) {
+        fprintf(stdout, "sender:%d sendercount:%d recvtime:%f\n", sender[my_addr()][sendercount[my_addr()]],
+                sendercount[my_addr()], recvtime[my_addr()][sendercount[my_addr()]]);
+    }
     //受信履歴をファイルに出力
     //2019.07.03重いので停止
     /*fprintf(recvlogFile, "node,sendercount,sender,recvtime\n");
@@ -575,7 +595,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
         bunbo++;
         //bunbo=bunbo+packetweight[my_addr()][i];
     }
-    fprintf(stdout, "区切りエントリはtopocount %d\n", topocount[my_addr()]);
+    if(LOG_LV>=1) {
+        fprintf(stdout, "区切りエントリはtopocount %d\n", topocount[my_addr()]);
+    }
     //区切りエントリに基づいて、現在のエントリから遡り、ヒット数を計測
     hitcount[my_addr()] = 0;
     for (int i = sendercount[my_addr()]; i >= topocount[my_addr()]; i--) {
@@ -615,12 +637,13 @@ void SBAgent::recv(Packet *p,Handler *h) {
     }
 
     //上流リスト表示
-    fprintf(stdout, "upstream list:");
-    for (int i = 0; i < upstreamNodeListCount; i++) {
-        fprintf(stdout, "%d ", upstreamNodeList[i]);
+    if(LOG_LV >= 1) {
+        fprintf(stdout, "upstream list:");
+        for (int i = 0; i < upstreamNodeListCount; i++) {
+            fprintf(stdout, "%d ", upstreamNodeList[i]);
+        }
+        fprintf(stdout, "(%d/%d)\n", upstreamNodeListCount, neighbor_count);
     }
-    fprintf(stdout, "(%d/%d)\n", upstreamNodeListCount, neighbor_count);
-
     if (my_addr() == 6) {
         fprintf(kakunin1File, "upstream list:");
         for (int i = 0; i < upstreamNodeListCount; i++) {
@@ -662,12 +685,13 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
 
     //下流リスト表示
-    fprintf(stdout, "downstream list:");
-    for (int i = 0; i < downstreamNodeListCount; i++) {
-        fprintf(stdout, "%d ", downstreamNodeList[i]);
+    if(LOG_LV >= 1) {
+        fprintf(stdout, "downstream list:");
+        for (int i = 0; i < downstreamNodeListCount; i++) {
+            fprintf(stdout, "%d ", downstreamNodeList[i]);
+        }
+        fprintf(stdout, "(%d/%d)\n", downstreamNodeListCount, neighbor_count);
     }
-    fprintf(stdout, "(%d/%d)\n", downstreamNodeListCount, neighbor_count);
-
     if(neighbor_count<=1){
         fprintf(errorFile,"%f node:%d neighbor is low(%d)\n",Scheduler::instance().clock(),my_addr(),neighbor_count);
     }
@@ -723,15 +747,20 @@ void SBAgent::recv(Packet *p,Handler *h) {
     //下流履歴の区切りエントリを検索
     int downstreamTimeEntry = 0;
     int downstreamTimeCount = 0;//こいつは個数
-    fprintf(stdout, "%d %f %f\n", DownstreamCount[my_addr()], DownstreamTime[my_addr()][DownstreamCount[my_addr()]],
-            time_limit);
+    if(LOG_LV >= 1) {
+        fprintf(stdout, "%d %f %f\n", DownstreamCount[my_addr()], DownstreamTime[my_addr()][DownstreamCount[my_addr()]],
+                time_limit);
+    }
     for (int i = DownstreamCount[my_addr()]; DownstreamTime[my_addr()][i] >= time_limit; i--) {
         downstreamTimeEntry = i;
         downstreamTimeCount++;
-        fprintf(stdout, "P");
+        if(LOG_LV >= 1) {
+            fprintf(stdout, "P");
+        }
     }
-    fprintf(stdout, "dTET:%f dTE:%d dTC:%d\n", time_limit, downstreamTimeEntry, downstreamTimeCount);
-
+    if(LOG_LV >= 1 ) {
+        fprintf(stdout, "dTET:%f dTE:%d dTC:%d\n", time_limit, downstreamTimeEntry, downstreamTimeCount);
+    }
     if (my_addr() == 6) {
         fprintf(kakunin4File, "sender:");
         for (int i = sendercount[my_addr()]; i >= 0; i--) {
@@ -761,15 +790,20 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
 
     //下流リストによる変動係数
-    fprintf(stdout, "d_count:%d\n", downstreamNodeListCount);
-
+    if(LOG_LV >= 1) {
+        fprintf(stdout, "d_count:%d\n", downstreamNodeListCount);
+    }
     float down_avg = 0;
     if (downstreamNodeListCount != 0) {
         down_avg = (float) downstreamTimeCount / (float) downstreamNodeListCount;
     } else {
-        fprintf(stdout, "downstreamNodeListCount is zero. Skipping calc down_avg\n");
+        if(LOG_LV >= 1) {
+            fprintf(stdout, "downstreamNodeListCount is zero. Skipping calc down_avg\n");
+        }
     }
-    fprintf(stdout, "d_avg:%f d_count:%f\n", down_avg, (float) downstreamNodeListCount);
+    if(LOG_LV >= 1) {
+        fprintf(stdout, "d_avg:%f d_count:%f\n", down_avg, (float) downstreamNodeListCount);
+    }
     int asada = 0;
     if (my_addr() == 6) {
         fprintf(kakunin5File, "-----node:%d-----\n", my_addr());
@@ -822,7 +856,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
         down_bunsan = down_bunsan_sum / (float)downstreamNodeListCount;//timecount?
     }
     else{
-        fprintf(stdout,"downstreamNodeListCount is zero. Skipping calc down_bunsan\n");
+        if(LOG_LV >= 1) {
+            fprintf(stdout, "downstreamNodeListCount is zero. Skipping calc down_bunsan\n");
+        }
     }
 
     float down_hendou=-1;
@@ -830,7 +866,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
         down_hendou = sqrt(down_bunsan) / down_avg;
     }
     else{
-        fprintf(stdout,"don_avg is zero. Skipping calc down_hendou\n");
+        if(LOG_LV >= 1) {
+            fprintf(stdout, "don_avg is zero. Skipping calc down_hendou\n");
+        }
     }
 
     if(my_addr()==6) {
@@ -846,8 +884,10 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
     //ここまで変更中
     //TODO ここの妥当性を確認して
-    fprintf(stdout, "hendou:%f bunsan: %f  = %f / %d %d %d\n", down_hendou,down_bunsan,down_bunsan_sum,downstreamNodeListCount,asada,downstreamTimeCount);
-
+    if(LOG_LV >= 1) {
+        fprintf(stdout, "**********hendou:%f bunsan: %f  = %f / %d %d %d\n", down_hendou, down_bunsan, down_bunsan_sum,
+                downstreamNodeListCount, asada, downstreamTimeCount);
+    }
     //変動係数、送信頻度係数用
     int temp1,freq_max=0,freq_min=0;
    /* for(int i=0;i<NODE_NUM;i++) {//max,minを求める
@@ -1211,10 +1251,10 @@ void SBAgent::recv(Packet *p,Handler *h) {
     }*/
     //履歴カウンタ
     sendercount[my_addr()]++;
-
+    //ここはダミー
     float goukei_topo=0, neigh_topo=0;
     int nc_count=0, fl_count=0,neigh_freq=0;
-
+    //ダミーここまで
     //ここここここ
 
     //ステータス決定
@@ -1394,12 +1434,13 @@ void SBAgent::recv(Packet *p,Handler *h) {
         fprintf(mytraceFile,"%f\t",down_bunsan);
         fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
         fprintf(mytraceFile,"\n");
-
-        if(my_addr()==1){//デバッグ用
-            for(int i=1;i<12;i++) {
-                fprintf(stdout, "%d",recvlog[my_addr()][i]);
+        if(LOG_LV >= 1) {
+            if(my_addr()==1) {//デバッグ用
+                for (int i = 1; i < 12; i++) {
+                    fprintf(stdout, "%d", recvlog[my_addr()][i]);
+                }
+                fprintf(stdout, "\n");
             }
-            fprintf(stdout,"\n");
         }
 
     }
@@ -1794,8 +1835,10 @@ void SBAgent::recv(Packet *p,Handler *h) {
                     if(recvlog[my_addr()][ph->pkt1_]==1||recvlog[my_addr()][ph->pkt2_]==1||recvlog[my_addr()][ph->pkt3_]==1){
                         fprintf(mytraceFile, "decodeCN\t%f\tnode:%d\tfrom:%d\ttype:%d\tpktNo:%d\tcv:%d\ttopo:%f\tstatus:%d\tnei:%d\t[ %d %d %d %d %d]\n",
                                 Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pkttype_, ph->pktnum_,ph->codevc_,goukei_topo,mystatus[my_addr()],neighbor_count,ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
-                        fprintf(stdout,"@@@%d %d %d\n",recvlog[my_addr()][ph->pkt1_],recvlog[my_addr()][ph->pkt2_],recvlog[my_addr()][ph->pkt3_]);
-
+                        if(LOG_LV >= 1) {
+                            fprintf(stdout, "@@@%d %d %d\n", recvlog[my_addr()][ph->pkt1_],
+                                    recvlog[my_addr()][ph->pkt2_], recvlog[my_addr()][ph->pkt3_]);
+                        }
                         recvlog[my_addr()][ph->pkt1_] = 1;
                         recvlog[my_addr()][ph->pkt2_] = 1;
                         recvlog[my_addr()][ph->pkt3_] = 1;
@@ -2359,19 +2402,21 @@ void SBAgent::recv(Packet *p,Handler *h) {
             if (collectNum[my_addr()] == CODE_NUM) {
                 //並べ替え処理
                 int temp=-1;
-                for(int i=0;i<collectNum[my_addr()];i++){
-                    for(int j=collectNum[my_addr()]-1;j>i;j--){
-                        if(collectlist[my_addr()][j]<collectlist[my_addr()][j-1]){
-                            temp=collectlist[my_addr()][j];
-                            collectlist[my_addr()][j]=collectlist[my_addr()][j-1];
-                            collectlist[my_addr()][j-1]=temp;
+                for(int i=0;i<collectNum[my_addr()];i++) {
+                    for (int j = collectNum[my_addr()] - 1; j > i; j--) {
+                        if (collectlist[my_addr()][j] < collectlist[my_addr()][j - 1]) {
+                            temp = collectlist[my_addr()][j];
+                            collectlist[my_addr()][j] = collectlist[my_addr()][j - 1];
+                            collectlist[my_addr()][j - 1] = temp;
                         }
                     }
-                    printf("%d[",i);
-                    for(int k=0;k<5;k++){
-                        printf("%d ",collectlist[my_addr()][k]);
+                    if (LOG_LV >= 1) {
+                        printf("%d[", i);
+                        for (int k = 0; k < 5; k++) {
+                            printf("%d ", collectlist[my_addr()][k]);
+                        }
+                        printf("]\n");
                     }
-                    printf("]\n");
                 }
 
                 if (CODE_NUM == 2) {
@@ -2423,7 +2468,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
             //Scheduler::instance().schedule(target_,p,0.01 * Random::uniform());
         }
         else{
-            fprintf(stdout,"Send Err\n");
+            fprintf(errorFile,"Send Err\n");
             return;
         }
         return;
