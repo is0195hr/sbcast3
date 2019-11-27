@@ -26,7 +26,7 @@
 #define TIME_TH 5.0    //float
 #define NEIGHBOR_TH 2  //int
 
-#define NODE_NUM 400//18
+#define NODE_NUM 100//18
 #define GALOIS 256
 #define DELAY 1.0
 #define MAX_PACKET 750
@@ -49,9 +49,9 @@
 #define MODE_NC 1
 #define MODE_AFC 2
 //切り替え用マクロ
-#define SIM_MODE 2
+#define SIM_MODE 1
 
-#define HENDOU 0.7 //float
+#define HENDOU 0.5 //float
 #define SEIKI 0.3 //float
 
 #define TRANSTH_TYPE 3//3:総合判定,4:総合判定（確率NC
@@ -71,6 +71,8 @@ FILE * createcodeFile=fopen ("createcode.tr","wt");
 FILE * recvhistoryFile=fopen ("rcvhist.tr","wt");
 FILE * recvcodehistoryFile=fopen ("rcvcodehist.tr","wt");
 FILE * resFile=fopen ("res.tr","wt");
+FILE * resrawFile=fopen ("resraw.tr","wt");
+
 FILE * resAllFile=fopen("resAll.csv","a");
 FILE * tpFile=fopen ("tp.tr","wt");
 FILE * tempFile=fopen ("temp.csv","wt");
@@ -2944,7 +2946,8 @@ void SBAgent::printRes(){
         static float sum_drate;
 
         //for(int node : nodes) {
-        for(int k = 0; k < 5 ; k++){
+        //マルチキャスト用
+        /*for(int k = 0; k < 5 ; k++){
             int aru_count = 0;
             for (int i = START_PKT; i <= END_PKT; i++) {
                 if (recvlog[nodes[k]][i] == 1) {
@@ -2953,21 +2956,34 @@ void SBAgent::printRes(){
             }
             fprintf(resFile, "node:%d d_rate:%f\n", nodes[k], (float) aru_count / NUM_PKT);
             sum_drate = sum_drate + ((float) aru_count / NUM_PKT);
-            //0,1表記
-            /*
-            for (int i = 41; i <= 160; i++) {
-                fprintf(resFile, "%d", recvlog[my_addr()][i]);
-                if (i % 10 == 0) {
-                    fprintf(resFile, " ");
-                }
-            }
-            fprintf(resFile, "\n");
-            */
+
             fflush(resFile);
             fflush(resAllFile);
 
+        }*/
+        static float drate[NODE_NUM];
+        int nodecount=0;
+        //ブロードキャスト用
+        for(int k = 1; k < NODE_NUM ; k++){
+            int aru_count = 0;
+            float temp = 0.0;
+            for (int i = START_PKT; i <= END_PKT; i++) {
+                if (recvlog[k][i] == 1) {
+                    aru_count++;
+                }
+            }
+            temp = (float) aru_count / NUM_PKT;
+            //fprintf(resFile, "node:%d d_rate:%f\n", k, temp);
+            sum_drate = sum_drate + temp;
+            fprintf(resrawFile,"%f\n",sum_drate/(NODE_NUM-1));
+            fflush(resrawFile);
+            fflush(resAllFile);
+            nodecount++;
+
         }
-        fprintf(resAllFile,"%f\n",sum_drate/5);
+
+        fprintf(resFile,"%f\n",sum_drate/(float)nodecount);
+        fflush(resFile);
         done = true;
     }
 
