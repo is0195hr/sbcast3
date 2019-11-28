@@ -49,9 +49,9 @@
 #define MODE_NC 1
 #define MODE_AFC 2
 //切り替え用マクロ
-#define SIM_MODE 1
+#define SIM_MODE 2
 
-#define HENDOU 0.5 //float
+#define HENDOU 0.8 //float
 #define SEIKI 0.3 //float
 
 #define TRANSTH_TYPE 3//3:総合判定,4:総合判定（確率NC
@@ -66,19 +66,19 @@ FILE * mytraceFile=fopen ("mytrace.tr","wt");
 FILE * codelogFile=fopen ("codelog.tr","wt");
 FILE * codelogFile2=fopen ("codelog2.tr","wt");
 FILE * historyFile=fopen ("hist.tr","wt");
-FILE * recvlogFile=fopen ("recvlog.tr","wt");
+//FILE * recvlogFile=fopen ("recvlog.tr","wt");
 FILE * createcodeFile=fopen ("createcode.tr","wt");
-FILE * recvhistoryFile=fopen ("rcvhist.tr","wt");
-FILE * recvcodehistoryFile=fopen ("rcvcodehist.tr","wt");
+//FILE * recvhistoryFile=fopen ("rcvhist.tr","wt");
+//FILE * recvcodehistoryFile=fopen ("rcvcodehist.tr","wt");
 FILE * resFile=fopen ("res.tr","wt");
 FILE * resrawFile=fopen ("resraw.tr","wt");
 
 FILE * resAllFile=fopen("resAll.csv","a");
-FILE * tpFile=fopen ("tp.tr","wt");
-FILE * tempFile=fopen ("temp.csv","wt");
-FILE * temp2File=fopen ("temp2.csv","wt");
-FILE * temp3File=fopen ("temp3.csv","wt");
-FILE * calcFile=fopen ("calc.tr","wt");
+//FILE * tpFile=fopen ("tp.tr","wt");
+//FILE * tempFile=fopen ("temp.csv","wt");
+//FILE * temp2File=fopen ("temp2.csv","wt");
+//FILE * temp3File=fopen ("temp3.csv","wt");
+//FILE * calcFile=fopen ("calc.tr","wt");
 
 FILE * kakuninFile=fopen ("kakunin.tr","wt");
 FILE * kakunin1File=fopen ("kakunin1.tr","wt");
