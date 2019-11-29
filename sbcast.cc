@@ -51,7 +51,7 @@
 //切り替え用マクロ
 #define SIM_MODE 2
 
-#define HENDOU 0.8 //float
+#define HENDOU 0.1 //float
 #define SEIKI 0.3 //float
 
 #define TRANSTH_TYPE 3//3:総合判定,4:総合判定（確率NC
@@ -80,12 +80,14 @@ FILE * resAllFile=fopen("resAll.csv","a");
 //FILE * temp3File=fopen ("temp3.csv","wt");
 //FILE * calcFile=fopen ("calc.tr","wt");
 
+        /*
 FILE * kakuninFile=fopen ("kakunin.tr","wt");
 FILE * kakunin1File=fopen ("kakunin1.tr","wt");
 FILE * kakunin2File=fopen ("kakunin2.tr","wt");
 FILE * kakunin3File=fopen ("kakunin3.tr","wt");
 FILE * kakunin4File=fopen ("kakunin4.tr","wt");
 FILE * kakunin5File=fopen ("kakunin5.tr","wt");
+         */
 FILE * errorFile=fopen ("error.tr","wt");
 FILE * hendouFile=fopen ("hendou.tr","wt");
 
@@ -514,19 +516,19 @@ void SBAgent::recv(Packet *p,Handler *h) {
         }
     }
     //テスト用プリント
-    if (my_addr() == 6) {
+ /*   if (my_addr() == 6) {
         for (int i = 0; i <= sendercount[my_addr()]; i++) {
             fprintf(kakuninFile, "%d ", sender[my_addr()][i]);
         }
         fprintf(kakuninFile, "\n");
 
         if (recvlog[my_addr()][ph->pktnum_] == 0) {
-            for (int i = 0; i <= /*sendercount[my_addr()]*/recvNormalUpstreamCount[my_addr()]; i++) {
+            for (int i = 0; i <= recvNormalUpstreamCount[my_addr()]; i++) {
                 fprintf(kakunin1File, "%d ", recvNormalUpstreamSender[my_addr()][i]);
             }
             fprintf(kakunin1File, "\n");
         } else {
-            for (int i = 0; i <= /*sendercount[my_addr()]*/recvNormalDownstreamCount[my_addr()]; i++) {
+            for (int i = 0; i <= recvNormalDownstreamCount[my_addr()]; i++) {
                 fprintf(kakunin2File, "%d ", recvNormalDownstreamSender[my_addr()][i]);
             }
             fprintf(kakunin2File, "\n");
@@ -535,7 +537,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
     fflush(kakuninFile);
     fflush(kakunin1File);
     fflush(kakunin2File);
-
+*/
 
     //パケット種別に応じて重みづけ
     if (ph->pkttype_ == PKT_NORMAL) {
@@ -646,14 +648,14 @@ void SBAgent::recv(Packet *p,Handler *h) {
         }
         fprintf(stdout, "(%d/%d)\n", upstreamNodeListCount, neighbor_count);
     }
-    if (my_addr() == 6) {
+/*    if (my_addr() == 6) {
         fprintf(kakunin1File, "upstream list:");
         for (int i = 0; i < upstreamNodeListCount; i++) {
             fprintf(kakunin1File, "%d ", upstreamNodeList[i]);
         }
         fprintf(kakunin1File, "(%d/%d)\n", upstreamNodeListCount, neighbor_count);
     }
-
+*/
     //上流リストと比較
     int downstreamNodeList[BUF];
     int downstreamNodeListCount = 0;
@@ -763,7 +765,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
     if(LOG_LV >= 1 ) {
         fprintf(stdout, "dTET:%f dTE:%d dTC:%d\n", time_limit, downstreamTimeEntry, downstreamTimeCount);
     }
-    if (my_addr() == 6) {
+/*    if (my_addr() == 6) {
         fprintf(kakunin4File, "sender:");
         for (int i = sendercount[my_addr()]; i >= 0; i--) {
             fprintf(kakunin4File, "%d ", sender[my_addr()][i]);
@@ -789,7 +791,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
         }
         fprintf(kakunin4File, "\n\n");
     }
-
+*/
 
     //下流リストによる変動係数
     if(LOG_LV >= 1) {
@@ -807,7 +809,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
         fprintf(stdout, "d_avg:%f d_count:%f\n", down_avg, (float) downstreamNodeListCount);
     }
     int asada = 0;
-    if (my_addr() == 6) {
+/*    if (my_addr() == 6) {
         fprintf(kakunin5File, "-----node:%d-----\n", my_addr());
         if(ph->pkttype_==PKT_NORMAL) {
             fprintf(kakunin5File, "PT:NORMAL ID:%d\n", ph->pktnum_);
@@ -833,6 +835,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
         }
         fprintf(kakunin5File, "\n");
     }
+    */
     //送信回数maxとminを求める
     float down_bunsan_sum=0;
 
@@ -872,13 +875,14 @@ void SBAgent::recv(Packet *p,Handler *h) {
             fprintf(stdout, "don_avg is zero. Skipping calc down_hendou\n");
         }
     }
-
+/*
     if(my_addr()==6) {
         fprintf(kakunin5File, "down_bunsan_sum:%f\n", down_bunsan_sum);
         fprintf(kakunin5File, "down_bunsan:%f\n", down_bunsan);
         fprintf(kakunin5File, "down_avg:%f\n", down_avg);
         fprintf(kakunin5File, "down_hendou:%f\n", down_hendou);
     }
+    */
     if(down_hendou!=-1) {
         if(Scheduler::instance().clock() >=START_TIME && Scheduler::instance().clock() <=END_TIME)
         fprintf(hendouFile, "%f\n", down_hendou);
