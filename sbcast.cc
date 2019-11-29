@@ -51,7 +51,7 @@
 //切り替え用マクロ
 #define SIM_MODE 2
 
-#define HENDOU 0.1 //float
+#define HENDOU 1.0 //float
 #define SEIKI 0.3 //float
 
 #define TRANSTH_TYPE 3//3:総合判定,4:総合判定（確率NC
@@ -249,6 +249,8 @@ static int all_send_ccount;
 
 static int rcv_packet_count;
 static int send_packet_count;
+static int send_n_packet_count;
+static int send_c_packet_count;
 static int req_packet_count;
 static int rep_packet_count;
 
@@ -321,6 +323,8 @@ void SBAgent::sendBeacon() {
         send_packet_count=0;
         req_packet_count=0;
         rep_packet_count=0;
+        send_c_packet_count=0;
+        send_n_packet_count=0;
         //int a=test(1, 2);
         //fprintf(mytraceFile,"test:%d\n",a);
         time_t t = time(NULL);
@@ -425,6 +429,7 @@ void SBAgent::sendBeacon() {
     }
     //即時送信
 	send(p,0);
+    send_n_packet_count++;
     send_packet_count++;
     //test2('s',my_addr());
     //遅延送信
@@ -456,6 +461,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
     fflush(codelogFile);
     //fflush(recvcodehistoryFile);
     //fflush(recvlogFile);
+
 
     static float printtime=0;
     static int printcount=0;
@@ -1454,15 +1460,19 @@ void SBAgent::recv(Packet *p,Handler *h) {
     else if(ph->pkttype_==PKT_CODED){
         //一度受信した符号パケットは破棄(NORMALとは管理方法が異なる)
         for(int i=0;i<BUF;i++){
+            //fprintf(stdout,"0\n");
             if(recvcodelog[my_addr()][i]==ph->pktnum_){
-                if(ph->codenum_==2) {
+                //fprintf(stdout,"a\n");
+                if(ph->codenum_==2) {//TODO:この辺の判定がおかしい
+                    //fprintf(stdout,"%d) %d %d | %d %d\n",recvcodecount[my_addr()],recvcode1[my_addr()][i],recvcode2[my_addr()][i],ph->pkt1_,ph->pkt2_);
                    // if(recvcode1[my_addr()][recvcodecount[my_addr()]] == ph->pkt1_ &&
                      //  recvcode2[my_addr()][recvcodecount[my_addr()]] == ph->pkt2_){
                         if(recvcode1[my_addr()][i] == ph->pkt1_ &&
                            recvcode2[my_addr()][i] == ph->pkt2_){
                         fprintf(mytraceFile,"drop\n");
+                            fprintf(stdout,"b\n");
                         return;
-                    }
+                        }
                 }
                 else if(ph->codenum_==3) {
                     if(recvcode1[my_addr()][recvcodecount[my_addr()]] == ph->pkt1_ &&
@@ -1574,7 +1584,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
         }
 
-
+    fprintf(stdout,"%d\n",recvcodecount[my_addr()]);
         //受信パケットの復号
         if(ph->codenum_==2){
 
@@ -1897,7 +1907,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
             }
             recvcodecount[my_addr()]++;
         }
-        else if(ph->codenum_==4){
+        else if(ph->codenum_==4){//TODO:N=4以降がうこかないのはここを実装していないから
             fprintf(mytraceFile,"err:codenum4\n");
         }
         else if(ph->codenum_==5){
@@ -2345,6 +2355,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
             //send(p,0);
             if(Scheduler::instance().clock()>START_TIME && Scheduler::instance().clock()<=END_TIME) {
                 send_packet_count++;
+                send_n_packet_count++;
             }
             //遅延送信
             Scheduler::instance().schedule(target_,p,0.01 * Random::uniform());
@@ -2469,6 +2480,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
             send(p,0);
             if(Scheduler::instance().clock()>START_TIME && Scheduler::instance().clock()<=END_TIME) {
                 send_packet_count++;
+                send_n_packet_count++;
             }
             //遅延送信
             //Scheduler::instance().schedule(target_,p,0.01 * Random::uniform());
@@ -2540,12 +2552,13 @@ int SBAgent::createCodepacket2(int pkt_1, int pkt_2, int encode_count){
     fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
     fprintf(mytraceFile,"\n");
     //即時送信
-    send(p,0);
+    //send(p,0);
     if(Scheduler::instance().clock()>START_TIME && Scheduler::instance().clock()<=END_TIME) {
         send_packet_count++;
+        send_c_packet_count++;
     }
     //遅延送信
-    //Scheduler::instance().schedule(target_,p,0.01 * Random::uniform());
+    Scheduler::instance().schedule(target_,p,0.01 * Random::uniform());
     sendcodelog[my_addr()][sendcodecount[my_addr()]].pkt1=ph->pkt1_;
     sendcodelog[my_addr()][sendcodecount[my_addr()]].pkt2=ph->pkt2_;
     sendcodelog[my_addr()][sendcodecount[my_addr()]].codevec=ph->codevc_;
@@ -2937,8 +2950,11 @@ int SBAgent::createReplypacket(int pkt_1, int dest, int hoplimit) {
 void SBAgent::printRes(){
     static bool done = false;
     if(done == false && Scheduler::instance().clock() > END_TIME + ADD_TIME){
+        fprintf(stdout,"Output res...\n");
+
         //総パケット数
-        fprintf(resFile,"packet_count:%d %d %d %d\n",rcv_packet_count,send_packet_count,req_packet_count,rep_packet_count);
+        //fprintf(resFile,"packet_count:%d %d %d %d\n",rcv_packet_count,send_packet_count,req_packet_count,rep_packet_count);
+        fprintf(resFile,"%d %d %d\n",send_n_packet_count,send_c_packet_count,send_packet_count);
         fprintf(resAllFile,"%d,",SIM_MODE);
         fprintf(resAllFile,"%.2f,",TIME_TH);
         fprintf(resAllFile,"%.2f,",HENDOU);
@@ -2979,7 +2995,7 @@ void SBAgent::printRes(){
             temp = (float) aru_count / NUM_PKT;
             //fprintf(resFile, "node:%d d_rate:%f\n", k, temp);
             sum_drate = sum_drate + temp;
-            fprintf(resrawFile,"%f\n",sum_drate/(NODE_NUM-1));
+            fprintf(resrawFile,"node %d PDR %f\n",k,temp);
             fflush(resrawFile);
             fflush(resAllFile);
             nodecount++;
