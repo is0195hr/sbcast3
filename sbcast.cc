@@ -49,7 +49,7 @@
 #define MODE_NC 1
 #define MODE_AFC 2
 //切り替え用マクロ
-#define SIM_MODE 2
+#define SIM_MODE 1
 
 #define HENDOU 1.0 //float
 #define SEIKI 0.3 //float
@@ -359,13 +359,12 @@ void SBAgent::sendBeacon() {
         fprintf(mytraceFile,"goukei_topo\t");
         fprintf(mytraceFile,"mystatus\t");
         fprintf(mytraceFile,"neighbor_count\t");
-        fprintf(mytraceFile,"fl_count\t");
-        fprintf(mytraceFile,"nc_count\t");
-        fprintf(mytraceFile,"hendou\t");
-        fprintf(mytraceFile,"hybrid\t");
+        fprintf(mytraceFile,"nei_count\t");
+        fprintf(mytraceFile,"up_count\t");
+        fprintf(mytraceFile,"down_count\t");
+        fprintf(mytraceFile,"down_hendou\t");
         fprintf(mytraceFile,"include\t");
         fprintf(mytraceFile,"\n");
-
     }
 	Packet* p = allocpkt();
 	struct hdr_cmn* ch = HDR_CMN(p);
@@ -894,8 +893,6 @@ void SBAgent::recv(Packet *p,Handler *h) {
         fprintf(hendouFile, "%f\n", down_hendou);
     }
 
-    //ここまで変更中
-    //TODO ここの妥当性を確認して
     if(LOG_LV >= 1) {
         fprintf(stdout, "**********hendou:%f bunsan: %f  = %f / %d %d %d\n", down_hendou, down_bunsan, down_bunsan_sum,
                 downstreamNodeListCount, asada, downstreamTimeCount);
@@ -1439,11 +1436,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
         fprintf(mytraceFile,"%f\t",goukei_topo);
         fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
         fprintf(mytraceFile,"%d\t",neighbor_count);
-        fprintf(mytraceFile,"%d\t",fl_count);
-        fprintf(mytraceFile,"%d\t",nc_count);
-        fprintf(mytraceFile,"%f\t",hendou);
-        fprintf(mytraceFile,"%f\t",neigh_freq);
-        fprintf(mytraceFile,"%f\t",down_bunsan);
+        fprintf(mytraceFile,"%d\t",upstreamNodeListCount);
+        fprintf(mytraceFile,"%d\t",downstreamNodeListCount);
+        fprintf(mytraceFile,"%f\t",down_hendou);
         fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
         fprintf(mytraceFile,"\n");
         if(LOG_LV >= 1) {
@@ -1454,7 +1449,6 @@ void SBAgent::recv(Packet *p,Handler *h) {
                 fprintf(stdout, "\n");
             }
         }
-
     }
     //符号パケット
     else if(ph->pkttype_==PKT_CODED){
@@ -1470,7 +1464,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
                         if(recvcode1[my_addr()][i] == ph->pkt1_ &&
                            recvcode2[my_addr()][i] == ph->pkt2_){
                         fprintf(mytraceFile,"drop\n");
-                            fprintf(stdout,"b\n");
+                            //fprintf(stdout,"b\n");
                         return;
                         }
                 }
@@ -1541,10 +1535,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
         fprintf(mytraceFile,"%f\t",goukei_topo);
         fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
         fprintf(mytraceFile,"%d\t",neighbor_count);
-        fprintf(mytraceFile,"%d\t",fl_count);
-        fprintf(mytraceFile,"%d\t",nc_count);
-        fprintf(mytraceFile,"%f\t",hendou);
-        fprintf(mytraceFile,"%f\t",neigh_freq);
+        fprintf(mytraceFile,"%d\t",upstreamNodeListCount);
+        fprintf(mytraceFile,"%d\t",downstreamNodeListCount);
+        fprintf(mytraceFile,"%f\t",down_hendou);
         fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
         fprintf(mytraceFile,"\n");
 
@@ -1584,7 +1577,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
         }
 
-    fprintf(stdout,"%d\n",recvcodecount[my_addr()]);
+    //fprintf(stdout,"%d\n",recvcodecount[my_addr()]);
         //受信パケットの復号
         if(ph->codenum_==2){
 
@@ -1607,10 +1600,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
                     fprintf(mytraceFile,"%f\t",goukei_topo);
                     fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
                     fprintf(mytraceFile,"%d\t",neighbor_count);
-                    fprintf(mytraceFile,"%d\t",fl_count);
-                    fprintf(mytraceFile,"%d\t",nc_count);
-                    fprintf(mytraceFile,"%f\t",hendou);
-                    fprintf(mytraceFile,"%f\t",neigh_freq);
+                    fprintf(mytraceFile,"%d\t",upstreamNodeListCount);
+                    fprintf(mytraceFile,"%d\t",downstreamNodeListCount);
+                    fprintf(mytraceFile,"%f\t",down_hendou);
                     fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
                     fprintf(mytraceFile,"\n");
                     recvlog[my_addr()][ph->pkt1_]=1;
@@ -1621,7 +1613,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
                     fprintf(mytraceFile,"%d\t",my_addr());
                     fprintf(mytraceFile,"%d\t",ph->addr());
                     fprintf(mytraceFile,"%d\t",ph->pkttype_);
-                    fprintf(mytraceFile,"%d\t",ph->pkt1_);
+                    fprintf(mytraceFile,"%d\t",ph->pktnum_);
                     fprintf(mytraceFile,"%d\t",ph->hop_count_);
                     fprintf(mytraceFile,"%d\t",ph->hoplimit_);
                     fprintf(mytraceFile,"%d\t",ph->codevc_);
@@ -1629,10 +1621,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
                     fprintf(mytraceFile,"%f\t",goukei_topo);
                     fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
                     fprintf(mytraceFile,"%d\t",neighbor_count);
-                    fprintf(mytraceFile,"%d\t",fl_count);
-                    fprintf(mytraceFile,"%d\t",nc_count);
-                    fprintf(mytraceFile,"%f\t",hendou);
-                    fprintf(mytraceFile,"%f\t",neigh_freq);
+                    fprintf(mytraceFile,"%d\t",upstreamNodeListCount);
+                    fprintf(mytraceFile,"%d\t",downstreamNodeListCount);
+                    fprintf(mytraceFile,"%f\t",down_hendou);
                     fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
                     fprintf(mytraceFile,"\n");
                     //mytraceprint
@@ -1641,7 +1632,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
                     fprintf(mytraceFile,"%d\t",my_addr());
                     fprintf(mytraceFile,"%d\t",ph->addr());
                     fprintf(mytraceFile,"%d\t",ph->pkttype_);
-                    fprintf(mytraceFile,"%d\t",ph->pkt2_);
+                    fprintf(mytraceFile,"%d\t",ph->pktnum_);
                     fprintf(mytraceFile,"%d\t",ph->hop_count_);
                     fprintf(mytraceFile,"%d\t",ph->hoplimit_);
                     fprintf(mytraceFile,"%d\t",ph->codevc_);
@@ -1649,10 +1640,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
                     fprintf(mytraceFile,"%f\t",goukei_topo);
                     fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
                     fprintf(mytraceFile,"%d\t",neighbor_count);
-                    fprintf(mytraceFile,"%d\t",fl_count);
-                    fprintf(mytraceFile,"%d\t",nc_count);
-                    fprintf(mytraceFile,"%f\t",hendou);
-                    fprintf(mytraceFile,"%f\t",neigh_freq);
+                    fprintf(mytraceFile,"%d\t",upstreamNodeListCount);
+                    fprintf(mytraceFile,"%d\t",downstreamNodeListCount);
+                    fprintf(mytraceFile,"%f\t",down_hendou);
                     fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
                     fprintf(mytraceFile,"\n");
                     //fprintf(mytraceFile, "g\t%f\tnode:%d\tfrom:%d\ttype:N\tpktNo:%d\tcv:%d\ttopo:%f\tstatus:%d\tnei:%d\t[ %d %d %d %d %d]\n",
@@ -1688,10 +1678,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
                 fprintf(mytraceFile,"%f\t",goukei_topo);
                 fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
                 fprintf(mytraceFile,"%d\t",neighbor_count);
-                fprintf(mytraceFile,"%d\t",fl_count);
-                fprintf(mytraceFile,"%d\t",nc_count);
-                fprintf(mytraceFile,"%f\t",hendou);
-                fprintf(mytraceFile,"%f\t",neigh_freq);
+                fprintf(mytraceFile,"%d\t",upstreamNodeListCount);
+                fprintf(mytraceFile,"%d\t",downstreamNodeListCount);
+                fprintf(mytraceFile,"%f\t",down_hendou);
                 fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
                 fprintf(mytraceFile,"\n");
                 //fprintf(mytraceFile, "decodeN\t%f\tnode:%d\tfrom:%d\ttype:%d\tpktNo:%d\tcv:%d\ttopo:%f\tstatus:%d\tnei:%d\t[ %d %d %d %d %d]\n",
@@ -1708,7 +1697,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
                 fprintf(mytraceFile,"%d\t",my_addr());
                 fprintf(mytraceFile,"%d\t",ph->addr());
                 fprintf(mytraceFile,"%d\t",ph->pkttype_);
-                fprintf(mytraceFile,"%d\t",ph->pkt1_);
+                fprintf(mytraceFile,"%d\t",ph->pktnum_);
                 fprintf(mytraceFile,"%d\t",ph->hop_count_);
                 fprintf(mytraceFile,"%d\t",ph->hoplimit_);
                 fprintf(mytraceFile,"%d\t",ph->codevc_);
@@ -1716,10 +1705,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
                 fprintf(mytraceFile,"%f\t",goukei_topo);
                 fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
                 fprintf(mytraceFile,"%d\t",neighbor_count);
-                fprintf(mytraceFile,"%d\t",fl_count);
-                fprintf(mytraceFile,"%d\t",nc_count);
-                fprintf(mytraceFile,"%f\t",hendou);
-                fprintf(mytraceFile,"%f\t",neigh_freq);
+                fprintf(mytraceFile,"%d\t",upstreamNodeListCount);
+                fprintf(mytraceFile,"%d\t",downstreamNodeListCount);
+                fprintf(mytraceFile,"%f\t",down_hendou);
                 fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
                 fprintf(mytraceFile,"\n");
                 //mytraceprint
@@ -1728,7 +1716,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
                 fprintf(mytraceFile,"%d\t",my_addr());
                 fprintf(mytraceFile,"%d\t",ph->addr());
                 fprintf(mytraceFile,"%d\t",ph->pkttype_);
-                fprintf(mytraceFile,"%d\t",ph->pkt2_);
+                fprintf(mytraceFile,"%d\t",ph->pktnum_);
                 fprintf(mytraceFile,"%d\t",ph->hop_count_);
                 fprintf(mytraceFile,"%d\t",ph->hoplimit_);
                 fprintf(mytraceFile,"%d\t",ph->codevc_);
@@ -1736,10 +1724,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
                 fprintf(mytraceFile,"%f\t",goukei_topo);
                 fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
                 fprintf(mytraceFile,"%d\t",neighbor_count);
-                fprintf(mytraceFile,"%d\t",fl_count);
-                fprintf(mytraceFile,"%d\t",nc_count);
-                fprintf(mytraceFile,"%f\t",hendou);
-                fprintf(mytraceFile,"%f\t",neigh_freq);
+                fprintf(mytraceFile,"%d\t",upstreamNodeListCount);
+                fprintf(mytraceFile,"%d\t",downstreamNodeListCount);
+                fprintf(mytraceFile,"%f\t",down_hendou);
                 fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
                 fprintf(mytraceFile,"\n");
                 recvcodeFlag[my_addr()][recvcodecount[my_addr()]]=1;
@@ -1762,10 +1749,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
                 fprintf(mytraceFile,"%f\t",goukei_topo);
                 fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
                 fprintf(mytraceFile,"%d\t",neighbor_count);
-                fprintf(mytraceFile,"%d\t",fl_count);
-                fprintf(mytraceFile,"%d\t",nc_count);
-                fprintf(mytraceFile,"%f\t",hendou);
-                fprintf(mytraceFile,"%f\t",neigh_freq);
+                fprintf(mytraceFile,"%d\t",upstreamNodeListCount);
+                fprintf(mytraceFile,"%d\t",downstreamNodeListCount);
+                fprintf(mytraceFile,"%f\t",down_hendou);
                 fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
                 fprintf(mytraceFile,"\n");
                 dcwait1[my_addr()][decodequeuecount[my_addr()]]=ph->pkt1_;
@@ -1943,10 +1929,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
             fprintf(mytraceFile,"%f\t",goukei_topo);
             fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
             fprintf(mytraceFile,"%d\t",neighbor_count);
-            fprintf(mytraceFile,"%d\t",fl_count);
-            fprintf(mytraceFile,"%d\t",nc_count);
-            fprintf(mytraceFile,"%f\t",hendou);
-            fprintf(mytraceFile,"%f\t",neigh_freq);
+            fprintf(mytraceFile,"%d\t",upstreamNodeListCount);
+            fprintf(mytraceFile,"%d\t",downstreamNodeListCount);
+            fprintf(mytraceFile,"%f\t",down_hendou);
             fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
             fprintf(mytraceFile,"\n");
 
@@ -1987,10 +1972,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
         fprintf(mytraceFile,"%f\t",goukei_topo);
         fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
         fprintf(mytraceFile,"%d\t",neighbor_count);
-        fprintf(mytraceFile,"%d\t",fl_count);
-        fprintf(mytraceFile,"%d\t",nc_count);
-        fprintf(mytraceFile,"%f\t",hendou);
-        fprintf(mytraceFile,"%f\t",neigh_freq);
+        fprintf(mytraceFile,"%d\t",upstreamNodeListCount);
+        fprintf(mytraceFile,"%d\t",downstreamNodeListCount);
+        fprintf(mytraceFile,"%f\t",down_hendou);
         fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
         fprintf(mytraceFile,"\n");
 
@@ -2125,10 +2109,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
         fprintf(mytraceFile,"%f\t",goukei_topo);
         fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
         fprintf(mytraceFile,"%d\t",neighbor_count);
-        fprintf(mytraceFile,"%d\t",fl_count);
-        fprintf(mytraceFile,"%d\t",nc_count);
-        fprintf(mytraceFile,"%f\t",hendou);
-        fprintf(mytraceFile,"%f\t",neigh_freq);
+        fprintf(mytraceFile,"%d\t",upstreamNodeListCount);
+        fprintf(mytraceFile,"%d\t",downstreamNodeListCount);
+        fprintf(mytraceFile,"%f\t",down_hendou);
         fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
         fprintf(mytraceFile,"\n");
         req_packet_count++;
@@ -2155,10 +2138,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
         fprintf(mytraceFile,"%f\t",goukei_topo);
         fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
         fprintf(mytraceFile,"%d\t",neighbor_count);
-        fprintf(mytraceFile,"%d\t",fl_count);
-        fprintf(mytraceFile,"%d\t",nc_count);
-        fprintf(mytraceFile,"%f\t",hendou);
-        fprintf(mytraceFile,"%f\t",neigh_freq);
+        fprintf(mytraceFile,"%d\t",upstreamNodeListCount);
+        fprintf(mytraceFile,"%d\t",downstreamNodeListCount);
+        fprintf(mytraceFile,"%f\t",down_hendou);
         fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
         fprintf(mytraceFile,"\n");
         rep_packet_count++;
@@ -2345,10 +2327,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
             fprintf(mytraceFile,"%f\t",goukei_topo);
             fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
             fprintf(mytraceFile,"%d\t",neighbor_count);
-            fprintf(mytraceFile,"%d\t",fl_count);
-            fprintf(mytraceFile,"%d\t",nc_count);
-            fprintf(mytraceFile,"%f\t",hendou);
-            fprintf(mytraceFile,"%f\t",neigh_freq);
+            fprintf(mytraceFile,"%d\t",upstreamNodeListCount);
+            fprintf(mytraceFile,"%d\t",downstreamNodeListCount);
+            fprintf(mytraceFile,"%f\t",down_hendou);
             fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
             fprintf(mytraceFile,"\n");
             //即時送信
@@ -2379,10 +2360,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
             fprintf(mytraceFile,"%f\t",goukei_topo);
             fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
             fprintf(mytraceFile,"%d\t",neighbor_count);
-            fprintf(mytraceFile,"%d\t",fl_count);
-            fprintf(mytraceFile,"%d\t",nc_count);
-            fprintf(mytraceFile,"%f\t",hendou);
-            fprintf(mytraceFile,"%f\t",neigh_freq);
+            fprintf(mytraceFile,"%d\t",upstreamNodeListCount);
+            fprintf(mytraceFile,"%d\t",downstreamNodeListCount);
+            fprintf(mytraceFile,"%f\t",down_hendou);
             fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
             fprintf(mytraceFile,"\n");
             if(collectNum[my_addr()]+1==CODE_NUM) {//あとひとつあつまれば送信できるとき
@@ -2409,10 +2389,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
             fprintf(mytraceFile,"%f\t",goukei_topo);
             fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
             fprintf(mytraceFile,"%d\t",neighbor_count);
-            fprintf(mytraceFile,"%d\t",fl_count);
-            fprintf(mytraceFile,"%d\t",nc_count);
-            fprintf(mytraceFile,"%f\t",hendou);
-            fprintf(mytraceFile,"%f\t",neigh_freq);
+            fprintf(mytraceFile,"%d\t",upstreamNodeListCount);
+            fprintf(mytraceFile,"%d\t",downstreamNodeListCount);
+            fprintf(mytraceFile,"%f\t",down_hendou);
             fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
             fprintf(mytraceFile,"\n");
 
