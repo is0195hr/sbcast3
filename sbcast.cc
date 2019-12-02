@@ -358,7 +358,6 @@ void SBAgent::sendBeacon() {
         fprintf(mytraceFile,"encode_count_\t");
         fprintf(mytraceFile,"goukei_topo\t");
         fprintf(mytraceFile,"mystatus\t");
-        fprintf(mytraceFile,"neighbor_count\t");
         fprintf(mytraceFile,"nei_count\t");
         fprintf(mytraceFile,"up_count\t");
         fprintf(mytraceFile,"down_count\t");
@@ -413,7 +412,7 @@ void SBAgent::sendBeacon() {
     //fprintf(mytraceFile,"%d\t",neighbor_count);
     //fprintf(mytraceFile,"%d\t",fl_count);
     //fprintf(mytraceFile,"%d\t",nc_count);
-    fprintf(mytraceFile,"\t\t\t\t\t\t\t");
+    fprintf(mytraceFile,"\t\t\t\t\t\t");
     fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
     fprintf(mytraceFile,"\n");
     //ch->uid()=-1;
@@ -2527,7 +2526,7 @@ int SBAgent::createCodepacket2(int pkt_1, int pkt_2, int encode_count){
     //fprintf(mytraceFile,"%d\t",neighbor_count);
     //fprintf(mytraceFile,"%d\t",fl_count);
     //fprintf(mytraceFile,"%d\t",nc_count);
-    fprintf(mytraceFile,"\t\t\t\t\t\t\t");
+    fprintf(mytraceFile,"\t\t\t\t\t\t");
     fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
     fprintf(mytraceFile,"\n");
     //即時送信
