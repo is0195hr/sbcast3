@@ -49,9 +49,9 @@
 #define MODE_NC 1
 #define MODE_AFC 2
 //切り替え用マクロ
-#define SIM_MODE 2
+#define SIM_MODE 1
 
-#define HENDOU 0.4 //float
+#define HENDOU 0.0 //float
 #define SEIKI 0.3 //float
 
 #define TRANSTH_TYPE 3//3:総合判定,4:総合判定（確率NC
@@ -1453,15 +1453,15 @@ void SBAgent::recv(Packet *p,Handler *h) {
         //一度受信した符号パケットは破棄(NORMALとは管理方法が異なる)
         for(int i=0;i<BUF;i++){
             //fprintf(stdout,"0\n");
-            if(recvcodelog[my_addr()][i]==ph->pktnum_){
-                //fprintf(stdout,"a\n");
-                if(ph->codenum_==2) {//TODO:この辺の判定がおかしい
+            if(recvcodelog[my_addr()][i]==ph->pktnum_){//TODO:そもそもここが通らない
+                fprintf(stdout,"a\n");
+                if(ph->codenum_== 2) {//TODO:この辺の判定がおかしい
                     //fprintf(stdout,"%d) %d %d | %d %d\n",recvcodecount[my_addr()],recvcode1[my_addr()][i],recvcode2[my_addr()][i],ph->pkt1_,ph->pkt2_);
                    // if(recvcode1[my_addr()][recvcodecount[my_addr()]] == ph->pkt1_ &&
                      //  recvcode2[my_addr()][recvcodecount[my_addr()]] == ph->pkt2_){
                         if(recvcode1[my_addr()][i] == ph->pkt1_ &&
                            recvcode2[my_addr()][i] == ph->pkt2_){
-                        fprintf(mytraceFile,"drop\n");
+                            fprintf(mytraceFile,"drop\n");
                             //fprintf(stdout,"b\n");
                         return;
                         }
@@ -1492,7 +1492,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
         if(Scheduler::instance().clock()>START_TIME && Scheduler::instance().clock()<=END_TIME) {
             rcv_packet_count++;
         }
-        //受信記録
+        //受信記録、ここでrecvcodecountに記入される
         recvcodelog[my_addr()][recvcodecount[my_addr()]] = ph->pktnum_;
         recvcodevec[my_addr()][recvcodecount[my_addr()]] = ph->codevc_;
         if(ph->codenum_==2) {
