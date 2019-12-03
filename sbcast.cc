@@ -49,9 +49,9 @@
 #define MODE_NC 1
 #define MODE_AFC 2
 //切り替え用マクロ
-#define SIM_MODE 1
+#define SIM_MODE 2
 
-#define HENDOU 1.0 //float
+#define HENDOU 0.4 //float
 #define SEIKI 0.3 //float
 
 #define TRANSTH_TYPE 3//3:総合判定,4:総合判定（確率NC
@@ -70,7 +70,7 @@ FILE * historyFile=fopen ("hist.tr","wt");
 FILE * createcodeFile=fopen ("createcode.tr","wt");
 //FILE * recvhistoryFile=fopen ("rcvhist.tr","wt");
 //FILE * recvcodehistoryFile=fopen ("rcvcodehist.tr","wt");
-FILE * resFile=fopen ("res.tr","wt");
+FILE * resFile=fopen ("res.tr","a");
 FILE * resrawFile=fopen ("resraw.tr","wt");
 
 FILE * resAllFile=fopen("resAll.csv","a");
@@ -456,7 +456,6 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
 
     fflush(mytraceFile);
-    fflush(codelogFile);
     //fflush(recvcodehistoryFile);
     //fflush(recvlogFile);
 
@@ -1487,6 +1486,9 @@ void SBAgent::recv(Packet *p,Handler *h) {
             fprintf(mytraceFile, "Err \t%f node:%d from:%d type:%d pktNo:%d \n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pkttype_, ph->pktnum_);
             return;
         }*/
+        if(ph->pkt1_==2 && ph->pkt2_==3){
+            fprintf(codelogFile,"r %d %d %f %d\n",my_addr(),ph->addr(),Scheduler::instance().clock(),ph->codevc_);
+        }
         if(Scheduler::instance().clock()>START_TIME && Scheduler::instance().clock()<=END_TIME) {
             rcv_packet_count++;
         }
@@ -1543,7 +1545,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
         //受信記録ここまで
         //fprintf(mytraceFile,"oraora\n");
         if(my_addr()==1) {
-            fprintf(codelogFile, "%d\t", recvcodecount[my_addr()]);
+           /* fprintf(codelogFile, "%d\t", recvcodecount[my_addr()]);
             fprintf(codelogFile, "%d\t", recvcodelog[my_addr()][recvcodecount[my_addr()]]);
             fprintf(codelogFile, "%d\t", recvcodevec[my_addr()][recvcodecount[my_addr()]]);
             fprintf(codelogFile, "%d\t", recvcode1[my_addr()][recvcodecount[my_addr()]]);
@@ -1551,7 +1553,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
             fprintf(codelogFile, "%d\t", recvcode3[my_addr()][recvcodecount[my_addr()]]);
             fprintf(codelogFile, "%d\t", recvcode4[my_addr()][recvcodecount[my_addr()]]);
             fprintf(codelogFile, "%d\t", recvcode5[my_addr()][recvcodecount[my_addr()]]);
-            fprintf(codelogFile, "%d\n", recvcodeFlag[my_addr()][recvcodecount[my_addr()]]);
+            fprintf(codelogFile, "%d\n", recvcodeFlag[my_addr()][recvcodecount[my_addr()]]);*/
             fflush(codelogFile);
 
         }
@@ -2932,7 +2934,7 @@ void SBAgent::printRes(){
 
         //総パケット数
         //fprintf(resFile,"packet_count:%d %d %d %d\n",rcv_packet_count,send_packet_count,req_packet_count,rep_packet_count);
-        fprintf(resFile,"%d %d %d\n",send_n_packet_count,send_c_packet_count,send_packet_count);
+        fprintf(resFile,"%d %f %d %d %d ",SIM_MODE,HENDOU,send_n_packet_count,send_c_packet_count,send_packet_count);
         fprintf(resAllFile,"%d,",SIM_MODE);
         fprintf(resAllFile,"%.2f,",TIME_TH);
         fprintf(resAllFile,"%.2f,",HENDOU);
