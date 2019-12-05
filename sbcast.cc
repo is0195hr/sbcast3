@@ -26,7 +26,7 @@
 #define TIME_TH 5.0    //float
 #define NEIGHBOR_TH 2  //int
 
-#define NODE_NUM 100//18
+#define NODE_NUM 150//18
 #define GALOIS 256
 #define DELAY 1.0
 #define MAX_PACKET 750
@@ -34,7 +34,7 @@
 #define UNDER_TH 1
 #define UPPER_TH 1
 
-#define START_TIME 5.0
+#define START_TIME 10.0
 #define END_TIME 40.0
 #define ADD_TIME 10.0
 
@@ -662,7 +662,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
     //上流リストと比較
     int downstreamNodeList[BUF];
     int downstreamNodeListCount = 0;
-    for (int i = 0; i < BUF; i++) {
+    for (int i = 0; i < NODE_NUM; i++) {
         downstreamNodeList[i] = -1;
     }
     int flag1 = 0, flag2 = 0;
@@ -1451,7 +1451,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
     //符号パケット
     else if(ph->pkttype_==PKT_CODED){
         //一度受信した符号パケットは破棄(NORMALとは管理方法が異なる)
-        for(int i=0;i<BUF;i++){
+        for(int i=0;i<recvcodecount[my_addr()];i++){
             //fprintf(stdout,"%d %d\n",recvcodelog[my_addr()][i],ph->pktnum_);
             //if(recvcodelog[my_addr()][i]==ph->pktnum_){//TODO:そもそもここが通らない
                // fprintf(stdout,"a\n");
@@ -2964,7 +2964,7 @@ void SBAgent::printRes(){
         static float drate[NODE_NUM];
         int nodecount=0;
         //ブロードキャスト用
-        for(int k = 1; k < NODE_NUM ; k++){
+        for(int k = 1; k < 11 ; k++){
             int aru_count = 0;
             float temp = 0.0;
             for (int i = START_PKT; i <= END_PKT; i++) {
