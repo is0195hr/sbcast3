@@ -3,7 +3,7 @@
 #include <time.h>
 #include "sbcast_output.h"
 #include <mobilenode.h>
-#define CODE_NUM 2
+#define CODE_NUM 3
 // TODO N=4,5がまともにうごかない問題
 #define BUF 3500
 
@@ -23,7 +23,7 @@
 #define STA_HYBRID 3
 
 #define SWITCH_TH 0.3  //float
-#define TIME_TH 5.0    //float
+#define TIME_TH 10.0    //float
 #define NEIGHBOR_TH 2  //int
 
 #define NODE_NUM 150//18
@@ -36,7 +36,7 @@
 
 #define START_TIME 10.0
 #define END_TIME 40.0
-#define ADD_TIME 10.0
+#define ADD_TIME 5.0
 
 #define MCAST_MEMBER_1 17
 #define MCAST_MEMBER_2 9
@@ -49,9 +49,9 @@
 #define MODE_NC 1
 #define MODE_AFC 2
 //切り替え用マクロ
-#define SIM_MODE 2
+#define SIM_MODE 1
 
-#define HENDOU 0.4 //float
+#define HENDOU 0.8 //float
 #define SEIKI 0.3 //float
 
 #define TRANSTH_TYPE 3//3:総合判定,4:総合判定（確率NC
@@ -90,7 +90,7 @@ FILE * kakunin5File=fopen ("kakunin5.tr","wt");
          */
 FILE * errorFile=fopen ("error.tr","wt");
 FILE * hendouFile=fopen ("hendou.tr","wt");
-
+FILE * hendou2File=fopen ("hendou2.tr","wt");
 
 
 
@@ -768,6 +768,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
     if(LOG_LV >= 1 ) {
         fprintf(stdout, "dTET:%f dTE:%d dTC:%d\n", time_limit, downstreamTimeEntry, downstreamTimeCount);
     }
+
 /*    if (my_addr() == 6) {
         fprintf(kakunin4File, "sender:");
         for (int i = sendercount[my_addr()]; i >= 0; i--) {
@@ -878,6 +879,24 @@ void SBAgent::recv(Packet *p,Handler *h) {
             fprintf(stdout, "don_avg is zero. Skipping calc down_hendou\n");
         }
     }
+
+
+    if(my_addr()==1) {
+        static int hanteikaisu=0;
+        hanteikaisu++;
+        for (int i = 0; i < downstreamNodeListCount; i++) {
+            int thisnode = downstreamNodeList[i];
+            int thisnodecount = 0;
+            for (int j = DownstreamCount[my_addr()]; DownstreamTime[my_addr()][j] >= time_limit; j--) {
+                if (DownstreamSender[my_addr()][j] == thisnode) {
+                    thisnodecount++;
+                }
+            }
+            fprintf(hendou2File, "%d %d %d %f\n", hanteikaisu, thisnode, thisnodecount,down_hendou);
+        }
+    }
+
+
 /*
     if(my_addr()==6) {
         fprintf(kakunin5File, "down_bunsan_sum:%f\n", down_bunsan_sum);
@@ -888,7 +907,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
     */
     if(down_hendou!=-1) {
         if(Scheduler::instance().clock() >=START_TIME && Scheduler::instance().clock() <=END_TIME)
-        fprintf(hendouFile, "%f\n", down_hendou);
+        fprintf(hendouFile, "%d %f\n",my_addr(), down_hendou);
     }
 
     if(LOG_LV >= 1) {
@@ -1467,9 +1486,26 @@ void SBAgent::recv(Packet *p,Handler *h) {
                         }
                 }
                 else if(ph->codenum_==3) {
-                    if(recvcode1[my_addr()][recvcodecount[my_addr()]] == ph->pkt1_ &&
-                       recvcode2[my_addr()][recvcodecount[my_addr()]] == ph->pkt2_ &&
-                       recvcode3[my_addr()][recvcodecount[my_addr()]] == ph->pkt3_){
+                    if(recvcode1[my_addr()][i] == ph->pkt1_ &&
+                       recvcode2[my_addr()][i] == ph->pkt2_ &&
+                       recvcode3[my_addr()][i] == ph->pkt3_){
+                        return;
+                    }
+                }
+                else if(ph->codenum_==4) {
+                    if(recvcode1[my_addr()][i] == ph->pkt1_ &&
+                       recvcode2[my_addr()][i] == ph->pkt2_ &&
+                       recvcode3[my_addr()][i] == ph->pkt3_ &&
+                       recvcode4[my_addr()][i] == ph->pkt4_ ){
+                        return;
+                    }
+                }
+                else if(ph->codenum_==5) {
+                    if(recvcode1[my_addr()][i] == ph->pkt1_ &&
+                       recvcode2[my_addr()][i] == ph->pkt2_ &&
+                       recvcode3[my_addr()][i] == ph->pkt3_ &&
+                       recvcode4[my_addr()][i] == ph->pkt4_ &&
+                       recvcode5[my_addr()][i] == ph->pkt5_){
                         return;
                     }
                 }
@@ -1894,7 +1930,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
             }
             recvcodecount[my_addr()]++;
         }
-        else if(ph->codenum_==4){//TODO:N=4以降がうこかないのはここを実装していないから
+        else if(ph->codenum_==4){//TODO:N=4以降がうこかないのはここを実装していないから,復号パターンが多い
             fprintf(mytraceFile,"err:codenum4\n");
         }
         else if(ph->codenum_==5){
@@ -2586,12 +2622,14 @@ int SBAgent::createCodepacket3(int pkt_1, int pkt_2 , int pkt_3, int encode_coun
 
     fprintf(mytraceFile, "sc\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\tencode:%d\n", Scheduler::instance().clock(), my_addr(),my_addr(),ph->pktnum_,ph->codevc_,encode_count);
     //即時送信
-    send(p,0);
+    //send(p,0);
     if(Scheduler::instance().clock()>START_TIME && Scheduler::instance().clock()<=END_TIME) {
         send_packet_count++;
+        send_c_packet_count++;
+
     }
     //遅延送信
-    //Scheduler::instance().schedule(target_,p,0.01 * Random::uniform());
+    Scheduler::instance().schedule(target_,p,0.01 * Random::uniform());
     sendcodelog[my_addr()][sendcodecount[my_addr()]].pkt1=ph->pkt1_;
     sendcodelog[my_addr()][sendcodecount[my_addr()]].pkt2=ph->pkt2_;
     sendcodelog[my_addr()][sendcodecount[my_addr()]].pkt3=ph->pkt3_;
