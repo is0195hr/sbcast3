@@ -3,9 +3,9 @@
 #include <time.h>
 #include "sbcast_output.h"
 #include <mobilenode.h>
-#define CODE_NUM 3
+#define CODE_NUM 2
 // TODO N=4,5がまともにうごかない問題
-#define BUF 3500
+#define BUF 1000//3500
 
 #define S 0
 #define R 1
@@ -23,10 +23,10 @@
 #define STA_HYBRID 3
 
 #define SWITCH_TH 0.3  //float
-#define TIME_TH 10.0    //float
+#define TIME_TH 5.0    //float
 #define NEIGHBOR_TH 2  //int
 
-#define NODE_NUM 150//18
+#define NODE_NUM 50//18
 #define GALOIS 256
 #define DELAY 1.0
 #define MAX_PACKET 750
@@ -49,7 +49,7 @@
 #define MODE_NC 1
 #define MODE_AFC 2
 //切り替え用マクロ
-#define SIM_MODE 1
+#define SIM_MODE 0
 
 #define HENDOU 0.8 //float
 #define SEIKI 0.3 //float
@@ -91,7 +91,7 @@ FILE * kakunin5File=fopen ("kakunin5.tr","wt");
 FILE * errorFile=fopen ("error.tr","wt");
 FILE * hendouFile=fopen ("hendou.tr","wt");
 FILE * hendou2File=fopen ("hendou2.tr","wt");
-
+FILE * bunpuFile=fopen ("bunpu.tr","wt");
 
 
 // TCL Hooks
@@ -205,6 +205,8 @@ static int DownstreamSender[BUF][BUF];
 static float DownstreamTime[BUF][BUF];
 static int DownstreamCount[BUF];
 
+static int bunpu[BUF][BUF];
+
 struct sendcodeinfo{
     int pktnumb;
     int pkt1;
@@ -253,6 +255,7 @@ static int send_n_packet_count;
 static int send_c_packet_count;
 static int req_packet_count;
 static int rep_packet_count;
+static int bunpuMax[BUF];
 
 //int SBAgent::createCodepacket2(int,int);
 void SBAgent::sendRequest(){
@@ -300,6 +303,7 @@ void SBAgent::sendBeacon() {
 
                 DownstreamSender[i][j]=-1;
                 DownstreamTime[i][j]=-1;
+                bunpu[i][j]=0;
 
             }
             mystatus[i]=0;
@@ -313,6 +317,7 @@ void SBAgent::sendBeacon() {
             recvNormalUpstreamCount[i]=-1;
             recvNormalDownstreamCount[i]=-1;
             DownstreamCount[i]=-1;
+            bunpuMax[i]=0;
         }
         syokika=1;
         all_rcv_ccount=0;
@@ -880,22 +885,46 @@ void SBAgent::recv(Packet *p,Handler *h) {
         }
     }
 
-
-    if(my_addr()==1) {
-        static int hanteikaisu=0;
-        hanteikaisu++;
-        for (int i = 0; i < downstreamNodeListCount; i++) {
-            int thisnode = downstreamNodeList[i];
-            int thisnodecount = 0;
-            for (int j = DownstreamCount[my_addr()]; DownstreamTime[my_addr()][j] >= time_limit; j--) {
-                if (DownstreamSender[my_addr()][j] == thisnode) {
-                    thisnodecount++;
+    if(Scheduler::instance().clock() >=START_TIME && Scheduler::instance().clock() <=END_TIME) {
+            if (my_addr() != 0) {
+                for(int i=0;i<BUF;i++){//初期化
+                    //for(int j=0;j<BUF;j++) {
+                        bunpu[my_addr()][i] = 0;
+                    //}
+                }
+                static int hanteikaisu = 0;
+                hanteikaisu++;
+                for (int i = 0; i < downstreamNodeListCount; i++) {
+                    int thisnode = downstreamNodeList[i];
+                    int thisnodecount = 0;
+                    for (int j = DownstreamCount[my_addr()]; DownstreamTime[my_addr()][j] >= time_limit; j--) {
+                        if (DownstreamSender[my_addr()][j] == thisnode) {
+                            thisnodecount++;
+                        }
+                    }
+                    fprintf(hendou2File, "%.1f %d %d %f\n", Scheduler::instance().clock(), thisnode, thisnodecount, down_hendou);
+                    fflush(hendou2File);
+                    bunpu[my_addr()][thisnodecount]++;
+                    if(thisnodecount>bunpuMax[my_addr()]){
+                        bunpuMax[my_addr()]=thisnodecount;
+                    }
                 }
             }
-            fprintf(hendou2File, "%d %d %d %f\n", hanteikaisu, thisnode, thisnodecount,down_hendou);
-        }
-    }
+            static float nexttime = START_TIME;
+            if(Scheduler::instance().clock() > nexttime) {
+                fprintf(bunpuFile,"%.1f------------------------------\n",Scheduler::instance().clock());
+                for(int i=0;i<NODE_NUM;i++){
+                    fprintf(bunpuFile,"node:%d %d / ",i,bunpuMax[i]);
+                    for(int j=0; j<=bunpuMax[i];j++){
+                        fprintf(bunpuFile,"%d ",bunpu[i][j]);
+                    }
+                    fprintf(bunpuFile,"\n");
+                    fflush(bunpuFile);
 
+                }
+                nexttime = nexttime + 1.00;
+            }
+    }
 
 /*
     if(my_addr()==6) {
@@ -3022,6 +3051,11 @@ void SBAgent::printRes(){
 
         fprintf(resFile,"%f\n",sum_drate/(float)nodecount);
         fflush(resFile);
+
+
+
+
+
         done = true;
     }
 
