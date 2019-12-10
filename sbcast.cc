@@ -887,7 +887,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
     if(Scheduler::instance().clock() >=START_TIME && Scheduler::instance().clock() <=END_TIME) {
             if (my_addr() != 0) {
-                for(int i=0;i<BUF;i++){//初期化
+                for(int i=0;i<BUF;i++){//毎回初期化
                     //for(int j=0;j<BUF;j++) {
                         bunpu[my_addr()][i] = 0;
                     //}
@@ -905,33 +905,47 @@ void SBAgent::recv(Packet *p,Handler *h) {
                     fprintf(hendou2File, "%.1f %d %d %f\n", Scheduler::instance().clock(), thisnode, thisnodecount, down_hendou);
                     fflush(hendou2File);
                     bunpu[my_addr()][thisnodecount]++;
-                    if(thisnodecount>bunpuMax[my_addr()]){
+                    if(thisnodecount > bunpuMax[my_addr()]){
                         bunpuMax[my_addr()]=thisnodecount;
                     }
                 }
             }
             int bunpu_sum[NODE_NUM];
             float bunpu_avg[NODE_NUM];
-
+            int bunpu_bunbo[NODE_NUM];
+            int bunpu_nowMax[NODE_NUM];
+            int bunpu_nowMin[NODE_NUM];
             for(int i= 0; i <NODE_NUM;i++) {
                 bunpu_sum[i]=0;
                 bunpu_avg[i]=0;
+                bunpu_bunbo[i]=0;
+                bunpu_nowMax[i]=0;
+                bunpu_nowMin[i]=NODE_NUM;
+
                 for (int j = 0; j <= bunpuMax[i]; j++) {
                     if (bunpu[i][j] != 0) {
                         bunpu_sum[i] = bunpu_sum[i] + bunpu[i][j] * j;
+                        bunpu_bunbo[i] = bunpu_bunbo[i] + bunpu[i][j];
+                        if(j<bunpu_nowMin[i]){
+                            bunpu_nowMin[i] = j;
+                        }
+                        if(j > bunpu_nowMax[i]){
+                            bunpu_nowMax[i] = j;
+                        }
                     }
                 }
-                if(bunpuMax[i]!=0){
-                    bunpu_avg[i]= (float)bunpu_sum[i]/(float)bunpuMax[i];//分母がおかしい
+                if(bunpu_bunbo[i]!=0){
+                    bunpu_avg[i]= (float)bunpu_sum[i]/(float)bunpu_bunbo[i];
                 }
             }
 
 
+            //ファイル出力
             static float nexttime = START_TIME;
             if(Scheduler::instance().clock() > nexttime) {
                 fprintf(bunpuFile,"%.1f------------------------------\n",Scheduler::instance().clock());
                 for(int i=0;i<NODE_NUM;i++){
-                    fprintf(bunpuFile,"node:%d max:%d sum:%d avg:%f/ ",i,bunpuMax[i],bunpu_sum[i],bunpu_avg[i]);
+                    fprintf(bunpuFile,"node:%d max:%d sum:%d avg:%f nowMAX:%d nowMIN:%d/ ",i,bunpuMax[i],bunpu_sum[i],bunpu_avg[i],bunpu_nowMax[i],bunpu_nowMin[i]);
                     for(int j=0; j<=bunpuMax[i];j++){
                         fprintf(bunpuFile,"%d ",bunpu[i][j]);
                     }
