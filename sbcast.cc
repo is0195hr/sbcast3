@@ -257,6 +257,7 @@ static int req_packet_count;
 static int rep_packet_count;
 static int bunpuMax[BUF];
 
+
 //int SBAgent::createCodepacket2(int,int);
 void SBAgent::sendRequest(){
 
@@ -305,6 +306,7 @@ void SBAgent::sendBeacon() {
                 DownstreamTime[i][j]=-1;
                 bunpu[i][j]=0;
 
+
             }
             mystatus[i]=0;
             collectNum[i]=0;
@@ -318,6 +320,7 @@ void SBAgent::sendBeacon() {
             recvNormalDownstreamCount[i]=-1;
             DownstreamCount[i]=-1;
             bunpuMax[i]=0;
+
         }
         syokika=1;
         all_rcv_ccount=0;
@@ -915,13 +918,20 @@ void SBAgent::recv(Packet *p,Handler *h) {
             int bunpu_bunbo[NODE_NUM];
             int bunpu_nowMax[NODE_NUM];
             int bunpu_nowMin[NODE_NUM];
+            float bunpu_median[NODE_NUM];
+            int bunpu_temp[NODE_NUM][BUF];
+            int bunpu_temp_count[NODE_NUM];
+
             for(int i= 0; i <NODE_NUM;i++) {
                 bunpu_sum[i]=0;
                 bunpu_avg[i]=0;
                 bunpu_bunbo[i]=0;
                 bunpu_nowMax[i]=0;
                 bunpu_nowMin[i]=NODE_NUM;
-
+                bunpu_temp_count[i]=0;
+                for(int ii=0;ii<BUF;ii++){
+                    bunpu_temp[i][ii]=0;
+                }
                 for (int j = 0; j <= bunpuMax[i]; j++) {
                     if (bunpu[i][j] != 0) {
                         bunpu_sum[i] = bunpu_sum[i] + bunpu[i][j] * j;
@@ -932,10 +942,30 @@ void SBAgent::recv(Packet *p,Handler *h) {
                         if(j > bunpu_nowMax[i]){
                             bunpu_nowMax[i] = j;
                         }
+                        for(int k=0;k<bunpu[i][j];k++) {
+                            bunpu_temp[i][bunpu_temp_count[i]] = j;
+                            bunpu_temp_count[i]++;
+                        }
                     }
                 }
+
                 if(bunpu_bunbo[i]!=0){
                     bunpu_avg[i]= (float)bunpu_sum[i]/(float)bunpu_bunbo[i];
+                }
+
+                if(bunpu_bunbo[i]%2==1){//奇数の時
+                    bunpu_median[i]=bunpu_temp[i][bunpu_bunbo[i]/2];
+                }
+                else{
+                    if(bunpu_bunbo[i]==0){
+                        bunpu_median[i]=0;
+                    }
+                    else {
+                       // bunpu_median[i] = (float)((float)bunpu_temp[i][bunpu_bunbo[i]/2] + (float)bunpu_temp[i][(bunpu_bunbo[i] / 2) + 1])/2;
+                        bunpu_median[i] = (float)((float)bunpu_temp[i][bunpu_temp_count[i]/2] + (float)bunpu_temp[i][(bunpu_temp_count[i] / 2) - 1])/2;
+
+                        //fprintf(bunpuFile,"%f %f\n",bunpu_bunbo(float)bunpu_temp[bunpu_bunbo[i]/2] , (float)bunpu_temp[(bunpu_bunbo[i] / 2) + 1]);
+                    }
                 }
             }
 
@@ -945,11 +975,16 @@ void SBAgent::recv(Packet *p,Handler *h) {
             if(Scheduler::instance().clock() > nexttime) {
                 fprintf(bunpuFile,"%.1f------------------------------\n",Scheduler::instance().clock());
                 for(int i=0;i<NODE_NUM;i++){
-                    fprintf(bunpuFile,"node:%d max:%d sum:%d avg:%f nowMAX:%d nowMIN:%d/ ",i,bunpuMax[i],bunpu_sum[i],bunpu_avg[i],bunpu_nowMax[i],bunpu_nowMin[i]);
+                    fprintf(bunpuFile,"node:%d max:%d sum:%d avg:%f nowMAX:%d nowMIN:%d med:%f (%d+%d)/ ",i,bunpuMax[i],bunpu_sum[i],bunpu_avg[i],bunpu_nowMax[i],bunpu_nowMin[i],bunpu_median[i],bunpu_temp[i][bunpu_temp_count[i] / 2],bunpu_temp[i][bunpu_temp_count[i] / 2-1]);
                     for(int j=0; j<=bunpuMax[i];j++){
                         fprintf(bunpuFile,"%d ",bunpu[i][j]);
                     }
                     fprintf(bunpuFile,"\n");
+                    for(int j=0;j<bunpu_temp_count[i];j++){
+                        fprintf(bunpuFile,"%d ",bunpu_temp[i][j]);
+                    }
+                    fprintf(bunpuFile,"\n");
+
                     fflush(bunpuFile);
 
                 }
