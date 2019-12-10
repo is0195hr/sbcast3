@@ -23,7 +23,7 @@
 #define STA_HYBRID 3
 
 #define SWITCH_TH 0.3  //float
-#define TIME_TH 5.0    //float
+#define TIME_TH 10.0    //float
 #define NEIGHBOR_TH 2  //int
 
 #define NODE_NUM 50//18
@@ -910,11 +910,28 @@ void SBAgent::recv(Packet *p,Handler *h) {
                     }
                 }
             }
+            int bunpu_sum[NODE_NUM];
+            float bunpu_avg[NODE_NUM];
+
+            for(int i= 0; i <NODE_NUM;i++) {
+                bunpu_sum[i]=0;
+                bunpu_avg[i]=0;
+                for (int j = 0; j <= bunpuMax[i]; j++) {
+                    if (bunpu[i][j] != 0) {
+                        bunpu_sum[i] = bunpu_sum[i] + bunpu[i][j] * j;
+                    }
+                }
+                if(bunpuMax[i]!=0){
+                    bunpu_avg[i]= (float)bunpu_sum[i]/(float)bunpuMax[i];//分母がおかしい
+                }
+            }
+
+
             static float nexttime = START_TIME;
             if(Scheduler::instance().clock() > nexttime) {
                 fprintf(bunpuFile,"%.1f------------------------------\n",Scheduler::instance().clock());
                 for(int i=0;i<NODE_NUM;i++){
-                    fprintf(bunpuFile,"node:%d %d / ",i,bunpuMax[i]);
+                    fprintf(bunpuFile,"node:%d max:%d sum:%d avg:%f/ ",i,bunpuMax[i],bunpu_sum[i],bunpu_avg[i]);
                     for(int j=0; j<=bunpuMax[i];j++){
                         fprintf(bunpuFile,"%d ",bunpu[i][j]);
                     }
