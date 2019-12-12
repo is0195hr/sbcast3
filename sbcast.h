@@ -31,6 +31,8 @@ struct hdr_beacon {
     int first_sender_;
     int destination_;
     int hoplimit_;
+    int hopHist_[256];
+    int hopHistCount_;
     inline nsaddr_t & addr() { return addr_; }
     inline u_int8_t & seq_num() { return seq_num_; }
     static int offset_;
@@ -80,6 +82,8 @@ public:
     int createReplypacket(int,int,int);
     int getArrayFirstEntry(int[],int);
     int getArrayNum(int[], int, int);
+
+    int fowardCodePacket(Packet *);
 
     inline nsaddr_t & my_addr() { return my_addr_;}
 };
