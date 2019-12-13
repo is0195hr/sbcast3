@@ -373,6 +373,7 @@ void SBAgent::sendBeacon() {
         fprintf(mytraceFile,"down_count\t");
         fprintf(mytraceFile,"down_hendou\t");
         fprintf(mytraceFile,"include\t");
+        fprintf(mytraceFile,"hopLog");
         fprintf(mytraceFile,"\n");
     }
     Packet* p = allocpkt();
@@ -1575,7 +1576,11 @@ void SBAgent::recv(Packet *p,Handler *h) {
         fprintf(mytraceFile,"%d\t",downstreamNodeListCount);
         fprintf(mytraceFile,"%f\t",down_hendou);
         fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
-        fprintf(mytraceFile,"\n");
+        fprintf(mytraceFile,"[");
+        for(int i=0;i<=ph->hopHistCount_;i++){
+            fprintf(mytraceFile,"%d ",ph->hopHist_[i]);
+        }
+        fprintf(mytraceFile,"]\n");
         if(LOG_LV >= 1) {
             if(my_addr()==1) {//デバッグ用
                 for (int i = 1; i < 12; i++) {
@@ -1694,7 +1699,11 @@ void SBAgent::recv(Packet *p,Handler *h) {
         fprintf(mytraceFile,"%d\t",downstreamNodeListCount);
         fprintf(mytraceFile,"%f\t",down_hendou);
         fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
-        fprintf(mytraceFile,"\n");
+        fprintf(mytraceFile,"[");
+        for(int i=0;i<=ph->hopHistCount_;i++){
+            fprintf(mytraceFile,"%d ",ph->hopHist_[i]);
+        }
+        fprintf(mytraceFile,"]\n");
 
         //受信記録ここまで
         //fprintf(mytraceFile,"oraora\n");
@@ -2362,7 +2371,7 @@ fprintf(recvhistoryFile,"\n");
             int codesendeflag=0;
             if(CODE_NUM == 2) {
                 for (int i = 0; i < sendcodecount[my_addr()]; i++) {
-                    if (sendcodelog[my_addr()][i].pkt1 == ph->pkt1_ && sendcodelog[my_addr()][i].pkt2 == ph->pkt2_ && ph->encode_count_>2){
+                    if (sendcodelog[my_addr()][i].pkt1 == ph->pkt1_ && sendcodelog[my_addr()][i].pkt2 == ph->pkt2_){ //&& ph->encode_count_>2){
                         codesendeflag=1;
 
                     }
@@ -2468,7 +2477,7 @@ fprintf(recvhistoryFile,"\n");
             ph->pkttype_ = PKT_NORMAL;
             ph->hop_count_++;
             ph->hopHistCount_++;
-            ph->hopHist_[ph->hopHistCount_];
+            ph->hopHist_[ph->hopHistCount_]=my_addr();
             ch->next_hop() = IP_BROADCAST;
             ch->addr_type() = NS_AF_NONE;
             ch->direction() = hdr_cmn::DOWN;
@@ -2491,6 +2500,7 @@ fprintf(recvhistoryFile,"\n");
             fprintf(mytraceFile,"%d\t",downstreamNodeListCount);
             fprintf(mytraceFile,"%f\t",down_hendou);
             fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+
             fprintf(mytraceFile,"\n");
             //即時送信
             //send(p,0);
@@ -2654,6 +2664,8 @@ int SBAgent::createCodepacket2(int pkt_1, int pkt_2, int encode_count){
     ph->hop_count_=1;
     encode_count++;
     ph->encode_count_=encode_count;
+    ph->hopHistCount_=0;
+    ph->hopHist_[ph->hopHistCount_]=my_addr();
 
 
     ch->direction() = hdr_cmn::DOWN;
@@ -2973,6 +2985,8 @@ int SBAgent::createReqpacket2(int pkt_1, int pkt_2,int dest) {
     ph->first_sender_=my_addr();
     ph->destination_=dest;
 
+
+
     ch->direction() = hdr_cmn::DOWN;
     ch->size() = IP_HDR_LEN;
     ch->error() = 0;
@@ -3189,15 +3203,16 @@ int SBAgent::fowardCodePacket(Packet * bp) {
 
     ph->addr() = my_addr();
     ph->seq_num() = seq_num_++;
-    ph->pktnum_=codepktnum;
+    //ph->pktnum_=codepktnum;
     ph->pkttype_=PKT_CODED;
     ch->ptype() = PT_SB;
-    ph->codenum_=2;
-    ph->codevc_=rand()%GALOIS+1;
+/*    ph->codevc_=rand()%GALOIS+1;
     ph->pkt3_=-1;
     ph->pkt4_=-1;
-    ph->pkt5_=-1;
-    ph->hop_count_=1;
+    ph->pkt5_=-1;*/
+    ph->hop_count_++;
+    ph->hopHistCount_++;
+    ph->hopHist_[ph->hopHistCount_]=my_addr();
 
 
     ch->direction() = hdr_cmn::DOWN;
@@ -3217,7 +3232,7 @@ int SBAgent::fowardCodePacket(Packet * bp) {
     //fprintf(mytraceFile, "sc\t%f\tnode:%d\tfrom:%d\ttype:%d\tpktNo:%d\tcv:%d\ttopo:NaN\tstatus:%d\tnei:NaN\t[ %d %d %d %d %d]\n",
     //		Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pkttype_, ph->pktnum_,ph->codevc_,mystatus[my_addr()],ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
     //mytraceprint
-    fprintf(mytraceFile,"sc\t");
+    fprintf(mytraceFile,"fc\t");
     fprintf(mytraceFile,"%f\t",Scheduler::instance().clock());
     fprintf(mytraceFile,"%d\t",my_addr());
     fprintf(mytraceFile,"%d\t",ph->addr());
@@ -3227,6 +3242,7 @@ int SBAgent::fowardCodePacket(Packet * bp) {
     fprintf(mytraceFile,"%d\t",ph->hoplimit_);
     fprintf(mytraceFile,"%d\t",ph->codevc_);
     fprintf(mytraceFile,"%d\t",ph->encode_count_);
+
     //fprintf(mytraceFile,"%f\t",goukei_topo);
     //fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
     //fprintf(mytraceFile,"%d\t",neighbor_count);
