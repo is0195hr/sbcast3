@@ -1603,7 +1603,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
                 //  recvcode2[my_addr()][recvcodecount[my_addr()]] == ph->pkt2_){
                 if(recvcode1[my_addr()][i] == ph->pkt1_ &&
                    recvcode2[my_addr()][i] == ph->pkt2_){
-                    fprintf(mytraceFile,"drop\t%f\t%d\n",Scheduler::instance().clock(),my_addr());
+                    //fprintf(mytraceFile,"drop\t%f\t%d\n",Scheduler::instance().clock(),my_addr());
                     //fprintf(stdout,"b\n");
                     //return;
                 }
@@ -2371,7 +2371,7 @@ fprintf(recvhistoryFile,"\n");
             int codesendeflag=0;
             if(CODE_NUM == 2) {
                 for (int i = 0; i < sendcodecount[my_addr()]; i++) {
-                    if (sendcodelog[my_addr()][i].pkt1 == ph->pkt1_ && sendcodelog[my_addr()][i].pkt2 == ph->pkt2_){ //&& ph->encode_count_>2){
+                    if (sendcodelog[my_addr()][i].pkt1 == ph->pkt1_ && sendcodelog[my_addr()][i].pkt2 == ph->pkt2_ && ph->encode_count_>1){
                         codesendeflag=1;
 
                     }
@@ -3210,6 +3210,7 @@ int SBAgent::fowardCodePacket(Packet * bp) {
     ph->pkt3_=-1;
     ph->pkt4_=-1;
     ph->pkt5_=-1;*/
+    ph->encode_count_++;
     ph->hop_count_++;
     ph->hopHistCount_++;
     ph->hopHist_[ph->hopHistCount_]=my_addr();
