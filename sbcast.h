@@ -83,7 +83,7 @@ public:
     int getArrayFirstEntry(int[],int);
     int getArrayNum(int[], int, int);
 
-    int fowardCodePacket(Packet *);
+    int forwardCodePacket(Packet *);
 
     inline nsaddr_t & my_addr() { return my_addr_;}
 };

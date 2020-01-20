@@ -2371,7 +2371,7 @@ fprintf(recvhistoryFile,"\n");
             int codesendeflag=0;
             if(CODE_NUM == 2) {
                 for (int i = 0; i < sendcodecount[my_addr()]; i++) {
-                    if (sendcodelog[my_addr()][i].pkt1 == ph->pkt1_ && sendcodelog[my_addr()][i].pkt2 == ph->pkt2_ && ph->encode_count_>1){
+                    if (sendcodelog[my_addr()][i].pkt1 == ph->pkt1_ && sendcodelog[my_addr()][i].pkt2 == ph->pkt2_ ){//&& ph->encode_count_>1){
                         codesendeflag=1;
 
                     }
@@ -2405,8 +2405,8 @@ fprintf(recvhistoryFile,"\n");
             //if(ph->encode_count_<CODE_NUM) {
             if(codesendeflag==0){
                 if (CODE_NUM == 2) {
-                    //createCodepacket2(ph->pkt1_, ph->pkt2_, ph->encode_count_);
-                    fowardCodePacket(p);
+                    //createCodepacket2(ph->pkt1_, ph->pkt2_, ph->encode_count_);//
+                    forwardCodePacket(p);
                     mystatus[my_addr()] = STA_FL;
                     collectNum[my_addr()] = 0;
                     //fprintf(mytraceFile, "fc\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pktnum_,ph->codevc_);
@@ -3195,7 +3195,7 @@ int SBAgent::getTimeNum(){
 
 }*/
 
-int SBAgent::fowardCodePacket(Packet * bp) {
+int SBAgent::forwardCodePacket(Packet * bp) {
     //Packet* p = allocpkt();
     struct hdr_cmn* ch = HDR_CMN(bp);
     struct hdr_ip* ih = HDR_IP(bp);
@@ -3210,7 +3210,7 @@ int SBAgent::fowardCodePacket(Packet * bp) {
     ph->pkt3_=-1;
     ph->pkt4_=-1;
     ph->pkt5_=-1;*/
-    ph->encode_count_++;
+    //ph->encode_count_++;
     ph->hop_count_++;
     ph->hopHistCount_++;
     ph->hopHist_[ph->hopHistCount_]=my_addr();
