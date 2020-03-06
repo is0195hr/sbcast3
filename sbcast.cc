@@ -23,10 +23,10 @@
 #define STA_HYBRID 3
 
 #define SWITCH_TH 0.3  //float
-#define TIME_TH 15.0    //float
-#define NEIGHBOR_TH 1  //int <
+#define TIME_TH 10.0    //float
+#define NEIGHBOR_TH 0  //int count<TH
 
-#define NODE_NUM 50//18
+#define NODE_NUM 100//18
 #define GALOIS 256
 #define DELAY 1.0
 #define MAX_PACKET 750
@@ -49,7 +49,7 @@
 #define MODE_NC 1
 #define MODE_AFC 2
 //切り替え用マクロ
-#define SIM_MODE 1
+#define SIM_MODE 2
 
 #define HENDOU 0.8 //float
 #define SEIKI 0.3 //float
@@ -57,7 +57,7 @@
 #define TRANSTH_TYPE 3//3:総合判定,4:総合判定（確率NC
 #define PROBABILITY 1.0 //0.5 //float
 
-#define SEND_INTERVAL 1.00//0.25
+#define SEND_INTERVAL 0.25//1.00//0.25
 
 #define LOG_LV 0
 
@@ -222,6 +222,9 @@ struct sendcodeinfo{
 static sendcodeinfo sendcodelog[BUF][BUF];
 static int sendcodecount[BUF];
 
+static sendcodeinfo forwardcodelog[BUF][BUF];
+static int forwardcodecount[BUF];
+
 const int START_PKT = (int)((float)(1/SEND_INTERVAL) * START_TIME+1);
 const int END_PKT = (int)((float)(1/SEND_INTERVAL) * END_TIME);
 const int NUM_PKT = END_PKT - START_PKT+1;
@@ -298,6 +301,14 @@ void SBAgent::sendBeacon() {
                 sendcodelog[i][j].pkt4=-1;
                 sendcodelog[i][j].pkt5=-1;
                 sendcodelog[i][j].pktnumb=-1;
+
+                forwardcodelog[i][j].codevec=-1;
+                forwardcodelog[i][j].pkt1=-1;
+                forwardcodelog[i][j].pkt2=-1;
+                forwardcodelog[i][j].pkt3=-1;
+                forwardcodelog[i][j].pkt4=-1;
+                forwardcodelog[i][j].pkt5=-1;
+                forwardcodelog[i][j].pktnumb=-1;
                 recvNormalUpstreamSender[i][j]=-1;
                 recvNormalUpstreamTime[i][j]=-1;
 
@@ -318,6 +329,7 @@ void SBAgent::sendBeacon() {
             hitcount[i]=0;
             decodequeuecount[i]=0;
             sendcodecount[i]=-1;
+            forwardcodecount[i]=-1;
             recvNormalUpstreamCount[i]=-1;
             recvNormalDownstreamCount[i]=-1;
             DownstreamCount[i]=-1;
@@ -456,7 +468,6 @@ void printIndex(FILE * fp){
                "max,min,max-min,"
                "seiki,force,"
                "0-1hantei,ave-hantei,bunsan-hanteo,hendoukeisuu-hantei,seiki+hendoukeisuu\n");
-
 }
 
 void SBAgent::recv(Packet *p,Handler *h) {
@@ -469,9 +480,6 @@ void SBAgent::recv(Packet *p,Handler *h) {
 
 
     fflush(mytraceFile);
-    //fflush(recvcodehistoryFile);
-    //fflush(recvlogFile);
-
 
     static float printtime=0;
     static int printcount=0;
@@ -702,8 +710,6 @@ void SBAgent::recv(Packet *p,Handler *h) {
     }
 
 
-
-
     //下流リスト表示
     if(LOG_LV >= 1) {
         fprintf(stdout, "downstream list:");
@@ -814,6 +820,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
     if(LOG_LV >= 1) {
         fprintf(stdout, "d_count:%d\n", downstreamNodeListCount);
     }
+    //下流履歴に基づく平均
     float down_avg = 0;
     if (downstreamNodeListCount != 0) {
         down_avg = (float) downstreamTimeCount / (float) downstreamNodeListCount;
@@ -985,7 +992,6 @@ void SBAgent::recv(Packet *p,Handler *h) {
         }
 
      if(Scheduler::instance().clock() >=START_TIME && Scheduler::instance().clock() <=END_TIME) {
-
         //ファイル出力
         static float nexttime = START_TIME;
         if(Scheduler::instance().clock() > nexttime) {
@@ -1484,7 +1490,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
         else if(mystatus[my_addr()]==STA_CODESENDREADY){
             mystatus[my_addr()]=STA_CODESENDREADY;
         }
-        //else if(neighbor_count<NEIGHBOR_TH){//隣接ノード数が足りない場合強制フラッディング
+        //else if(neighbor_count<NEIGHBOR_TH){//下流隣接ノード数が足りない場合強制フラッディング
         else if(downstreamNodeListCount<NEIGHBOR_TH){
             mystatus[my_addr()]=STA_FL;
             //fprintf(mytraceFile,"force floding\n");
@@ -1602,7 +1608,7 @@ void SBAgent::recv(Packet *p,Handler *h) {
                 // if(recvcode1[my_addr()][recvcodecount[my_addr()]] == ph->pkt1_ &&
                 //  recvcode2[my_addr()][recvcodecount[my_addr()]] == ph->pkt2_){
                 if(recvcode1[my_addr()][i] == ph->pkt1_ &&
-                   recvcode2[my_addr()][i] == ph->pkt2_){
+                   recvcode2[my_addr()][i] == ph->pkt2_){ //TODO:ここでCV判定するべき？
                     //fprintf(mytraceFile,"drop\t%f\t%d\n",Scheduler::instance().clock(),my_addr());
                     //fprintf(stdout,"b\n");
                     //return;
@@ -1657,13 +1663,11 @@ void SBAgent::recv(Packet *p,Handler *h) {
         if(ph->codenum_==2) {
             recvcode1[my_addr()][recvcodecount[my_addr()]] = ph->pkt1_;
             recvcode2[my_addr()][recvcodecount[my_addr()]] = ph->pkt2_;
-
         }
         else if(ph->codenum_==3) {
             recvcode1[my_addr()][recvcodecount[my_addr()]] = ph->pkt1_;
             recvcode2[my_addr()][recvcodecount[my_addr()]] = ph->pkt2_;
             recvcode3[my_addr()][recvcodecount[my_addr()]] = ph->pkt3_;
-
         }
         else if(ph->codenum_==4) {
             recvcode1[my_addr()][recvcodecount[my_addr()]] = ph->pkt1_;
@@ -1744,7 +1748,6 @@ void SBAgent::recv(Packet *p,Handler *h) {
         //fprintf(stdout,"%d\n",recvcodecount[my_addr()]);
         //受信パケットの復号
         if(ph->codenum_==2){
-
             for(int i=0; i<recvcodecount[my_addr()];i++){//符号＋符号
                 if((recvcode1[my_addr()][i]==ph->pkt1_ && recvcode2[my_addr()][i]==ph->pkt2_ && recvcodevec[my_addr()][i]!=ph->codevc_)||
                    (recvcode1[my_addr()][i]==ph->pkt2_ && recvcode2[my_addr()][i]==ph->pkt1_ && recvcodevec[my_addr()][i]!=ph->codevc_)) {
@@ -2367,7 +2370,9 @@ fprintf(recvhistoryFile,"\n");
             //fprintf(mytraceFile,"%d < %d\n",ph->encode_count_,CODE_NUM);
 
 
-            //同じ中身の確認(一度送信したパケットは送信しない)
+
+            //過去に符号化した組み合わせかを確認
+            //符号化していた場合codesendflag=1
             int codesendeflag=0;
             if(CODE_NUM == 2) {
                 for (int i = 0; i < sendcodecount[my_addr()]; i++) {
@@ -2397,16 +2402,16 @@ fprintf(recvhistoryFile,"\n");
                 for (int i = 0; i < sendcodecount[my_addr()]; i++) {
                     if (sendcodelog[my_addr()][i].pkt1 == ph->pkt1_ && sendcodelog[my_addr()][i].pkt2 == ph->pkt2_ && sendcodelog[my_addr()][i].pkt3 == ph->pkt3_ && sendcodelog[my_addr()][i].pkt4 == ph->pkt4_ && sendcodelog[my_addr()][i].pkt5 == ph->pkt5_){
                         codesendeflag=1;
-
                     }
                 }
             }
+
+            //一度も符号化したことのない組み合わせなので符号化
             //これでいけるか？k
             //if(ph->encode_count_<CODE_NUM) {
             if(codesendeflag==0){
                 if (CODE_NUM == 2) {
-                    //createCodepacket2(ph->pkt1_, ph->pkt2_, ph->encode_count_);//
-                    forwardCodePacket(p);
+                    createCodepacket2(ph->pkt1_, ph->pkt2_, ph->encode_count_);//
                     mystatus[my_addr()] = STA_FL;
                     collectNum[my_addr()] = 0;
                     //fprintf(mytraceFile, "fc\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pktnum_,ph->codevc_);
@@ -2430,8 +2435,29 @@ fprintf(recvhistoryFile,"\n");
 
 
             }
+            //過去に符号化を行った組み合わせなので中継する
+                //ここで中継すると無限ループ
             else{
-                fprintf(mytraceFile,"drop2\t%f\t%d\n",Scheduler::instance().clock(),my_addr());
+                //forwardCodePacket(p);
+
+                fprintf(mytraceFile,"STOP\t");
+                fprintf(mytraceFile,"%f\t",Scheduler::instance().clock());
+                fprintf(mytraceFile,"%d\t",my_addr());
+                fprintf(mytraceFile,"%d\t",ph->addr());
+                fprintf(mytraceFile,"%d\t",ph->pkttype_);
+                fprintf(mytraceFile,"%d\t",ph->pktnum_);
+                fprintf(mytraceFile,"%d\t",ph->hop_count_);
+                fprintf(mytraceFile,"%d\t",ph->hoplimit_);
+                fprintf(mytraceFile,"%d\t",ph->codevc_);
+                fprintf(mytraceFile,"%d\t",ph->encode_count_);
+                fprintf(mytraceFile,"%f\t",goukei_topo);
+                fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
+                fprintf(mytraceFile,"%d\t",neighbor_count);
+                fprintf(mytraceFile,"%d\t",upstreamNodeListCount);
+                fprintf(mytraceFile,"%d\t",downstreamNodeListCount);
+                fprintf(mytraceFile,"%f\t",down_hendou);
+                fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+                fprintf(mytraceFile,"\n");
 
                 return;
             }
@@ -2470,6 +2496,7 @@ fprintf(recvhistoryFile,"\n");
             return;*/
     }
     else if(ph->pkttype_==PKT_NORMAL) {
+        //TODO:flagによる判定が必要か？
         //自分の状態により動作変更
         if(mystatus[my_addr()] == STA_FL){
             int tempaddr = ph->addr();
@@ -2584,6 +2611,7 @@ fprintf(recvhistoryFile,"\n");
                         printf("]\n");
                     }
                 }
+                //TODO:ここにいちどふごうかしたくみあわせかどうかをかくにんすしょりをいれる
 
                 if (CODE_NUM == 2) {
                     createCodepacket2(collectlist[my_addr()][0], collectlist[my_addr()][1],0);
@@ -3155,22 +3183,16 @@ void SBAgent::printRes(){
             fflush(resrawFile);
             fflush(resAllFile);
             nodecount++;
-
         }
 
         fprintf(resFile,"%f\n",sum_drate/(float)nodecount);
         fflush(resFile);
-
-
-
-
 
         done = true;
     }
 
 }
 
-//void SBAgent::printRes(){
 int SBAgent::getArrayFirstEntry(int array[], int init){
     int counter=0;
     for (int i = 0; i < BUF; i++) {
@@ -3260,10 +3282,10 @@ int SBAgent::forwardCodePacket(Packet * bp) {
     }
     //遅延送信
     Scheduler::instance().schedule(target_,bp,0.01 * Random::uniform());
-    sendcodelog[my_addr()][sendcodecount[my_addr()]].pkt1=ph->pkt1_;
+    /*sendcodelog[my_addr()][sendcodecount[my_addr()]].pkt1=ph->pkt1_;
     sendcodelog[my_addr()][sendcodecount[my_addr()]].pkt2=ph->pkt2_;
     sendcodelog[my_addr()][sendcodecount[my_addr()]].codevec=ph->codevc_;
     sendcodelog[my_addr()][sendcodecount[my_addr()]].pktnumb=ph->pktnum_;
     sendcodecount[my_addr()]++;
-    codepktnum++;
+    codepktnum++;*/
 }
