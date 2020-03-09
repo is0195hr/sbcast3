@@ -24,7 +24,7 @@
 
 #define SWITCH_TH 0.3  //float
 #define TIME_TH 10.0    //float
-#define NEIGHBOR_TH 0  //int count<TH
+#define NEIGHBOR_TH 2  //int count<TH
 
 #define NODE_NUM 100//18
 #define GALOIS 256
@@ -182,6 +182,9 @@ static int recvcodeFlag[BUF][BUF];
 static int recvreqlog[BUF][BUF];
 static int recvreplog[BUF][BUF];
 
+static int forwardNormalLog[BUF][BUF];
+static int forwardNormalLogCount[BUF];
+
 //上流用raw
 static int recvNormalUpstreamSender[BUF][BUF];//[myaddr][]
 static float recvNormalUpstreamTime[BUF][BUF];
@@ -302,6 +305,8 @@ void SBAgent::sendBeacon() {
                 sendcodelog[i][j].pkt5=-1;
                 sendcodelog[i][j].pktnumb=-1;
 
+                forwardNormalLog[i][j]=-1;
+
                 forwardcodelog[i][j].codevec=-1;
                 forwardcodelog[i][j].pkt1=-1;
                 forwardcodelog[i][j].pkt2=-1;
@@ -334,7 +339,7 @@ void SBAgent::sendBeacon() {
             recvNormalDownstreamCount[i]=-1;
             DownstreamCount[i]=-1;
             bunpuMax[i]=0;
-
+            forwardNormalLogCount[i]=-1;
         }
         syokika=1;
         all_rcv_ccount=0;
@@ -2349,6 +2354,7 @@ fprintf(recvhistoryFile,"\n");
             }
 
 
+
             /* if (CODE_NUM == 2) {
                  createCodepacket2(collectlist[my_addr()][0], collectlist[my_addr()][1]);
 
@@ -2370,7 +2376,7 @@ fprintf(recvhistoryFile,"\n");
             //fprintf(mytraceFile,"%d < %d\n",ph->encode_count_,CODE_NUM);
 
 
-
+            //TODOfast:if(mystatus[my_addr()]==STA_CODESENDREADY){
             //過去に符号化した組み合わせかを確認
             //符号化していた場合codesendflag=1
             int codesendeflag=0;
@@ -2406,6 +2412,14 @@ fprintf(recvhistoryFile,"\n");
                 }
             }
 
+            //過去に通常パケットで送信していた場合符号化を中止
+            //codesendflag=1
+            if(CODE_NUM == 2){
+                if(forwardNormalLog[my_addr()][ph->pkt1_]==1 || forwardNormalLog[my_addr()][ph->pkt2_]==1){
+                    codesendeflag=1;
+                    fprintf(stdout,"通常パケットと重複\n");
+                }
+            }
             //一度も符号化したことのない組み合わせなので符号化
             //これでいけるか？k
             //if(ph->encode_count_<CODE_NUM) {
@@ -2478,6 +2492,7 @@ fprintf(recvhistoryFile,"\n");
             return;
     */
         }
+
         else if(flag == 0){//復号失敗、復号失敗時にreturnしているのでここには到達しないはず
             fprintf(mytraceFile,"%d\n",flag);
         }
@@ -2529,6 +2544,10 @@ fprintf(recvhistoryFile,"\n");
             fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
 
             fprintf(mytraceFile,"\n");
+
+            //中継記録
+            forwardNormalLog[my_addr()][ph->pktnum_]=1;
+
             //即時送信
             //send(p,0);
             if(Scheduler::instance().clock()>START_TIME && Scheduler::instance().clock()<=END_TIME) {
