@@ -164,6 +164,13 @@ void SBAgent::resetBcastTimer() {
     btimer_.resched((double)SEND_INTERVAL);
 }
 
+static int jc0=0;
+static int jc1=0;
+static int waitc=0;
+static int stbc=0;
+static int neic=0;
+static int flc=0;
+static int ncc=0;
 
 static int pktnum=1;
 static int codepktnum=1;
@@ -915,88 +922,88 @@ void SBAgent::recv(Packet *p,Handler *h) {
     int bunpu_temp[NODE_NUM][BUF];
     int bunpu_temp_count[NODE_NUM];
     int bunpu_mode[NODE_NUM];
-        if (my_addr() != 0) {
-            for(int i=0;i<BUF;i++){//毎回初期化
-                //for(int j=0;j<BUF;j++) {
-                bunpu[my_addr()][i] = 0;
-                //}
-            }
-            static int hanteikaisu = 0;
-            hanteikaisu++;
-            for (int i = 0; i < downstreamNodeListCount; i++) {
-                int thisnode = downstreamNodeList[i];
-                int thisnodecount = 0;
-                for (int j = DownstreamCount[my_addr()]; DownstreamTime[my_addr()][j] >= time_limit; j--) {
-                    if (DownstreamSender[my_addr()][j] == thisnode) {
-                        thisnodecount++;
-                    }
+    if (my_addr() != 0) {
+        for(int i=0;i<BUF;i++){//毎回初期化
+            //for(int j=0;j<BUF;j++) {
+            bunpu[my_addr()][i] = 0;
+            //}
+        }
+        static int hanteikaisu = 0;
+        hanteikaisu++;
+        for (int i = 0; i < downstreamNodeListCount; i++) {
+            int thisnode = downstreamNodeList[i];
+            int thisnodecount = 0;
+            for (int j = DownstreamCount[my_addr()]; DownstreamTime[my_addr()][j] >= time_limit; j--) {
+                if (DownstreamSender[my_addr()][j] == thisnode) {
+                    thisnodecount++;
                 }
-                fprintf(hendou2File, "%.1f %d %d %f\n", Scheduler::instance().clock(), thisnode, thisnodecount, down_hendou);
-                fflush(hendou2File);
-                bunpu[my_addr()][thisnodecount]++;
-                if(thisnodecount > bunpuMax[my_addr()]){
-                    bunpuMax[my_addr()]=thisnodecount;
+            }
+            fprintf(hendou2File, "%.1f %d %d %f\n", Scheduler::instance().clock(), thisnode, thisnodecount, down_hendou);
+            fflush(hendou2File);
+            bunpu[my_addr()][thisnodecount]++;
+            if(thisnodecount > bunpuMax[my_addr()]){
+                bunpuMax[my_addr()]=thisnodecount;
+            }
+        }
+    }
+
+
+    for(int i= 0; i <NODE_NUM;i++) {
+        bunpu_sum[i]=0;
+        bunpu_avg[i]=0;
+        bunpu_bunbo[i]=0;
+        bunpu_nowMax[i]=0;
+        bunpu_nowMin[i]=NODE_NUM;
+        bunpu_temp_count[i]=0;
+        bunpu_mode[i]=0;
+        for(int ii=0;ii<BUF;ii++){
+            bunpu_temp[i][ii]=0;
+        }
+        for (int j = 0; j <= bunpuMax[i]; j++) {
+            if (bunpu[i][j] != 0) {
+                bunpu_sum[i] = bunpu_sum[i] + bunpu[i][j] * j;
+                bunpu_bunbo[i] = bunpu_bunbo[i] + bunpu[i][j];
+                //最小値
+                if(j<bunpu_nowMin[i]){
+                    bunpu_nowMin[i] = j;
+                }
+                //最大値
+                if(j > bunpu_nowMax[i]){
+                    bunpu_nowMax[i] = j;
+                }
+                //median用に０を排除したリストを作成
+                for(int k=0;k<bunpu[i][j];k++) {
+                    bunpu_temp[i][bunpu_temp_count[i]] = j;
+                    bunpu_temp_count[i]++;
+                }
+                //mode
+                if(bunpu_mode[i] < j){
+                    bunpu_mode[i] = j;
                 }
             }
         }
+        //average
+        if(bunpu_bunbo[i]!=0){
+            bunpu_avg[i]= (float)bunpu_sum[i]/(float)bunpu_bunbo[i];
+        }
+        //median算出
+        if(bunpu_bunbo[i]%2==1){//奇数の時
+            bunpu_median[i]=bunpu_temp[i][bunpu_bunbo[i]/2];
+        }
+        else{//偶数の時
+            if(bunpu_bunbo[i]==0){
+                bunpu_median[i]=0;
+            }
+            else {
+                // bunpu_median[i] = (float)((float)bunpu_temp[i][bunpu_bunbo[i]/2] + (float)bunpu_temp[i][(bunpu_bunbo[i] / 2) + 1])/2;
+                bunpu_median[i] = (float)((float)bunpu_temp[i][bunpu_temp_count[i]/2] + (float)bunpu_temp[i][(bunpu_temp_count[i] / 2) - 1])/2;
 
-
-        for(int i= 0; i <NODE_NUM;i++) {
-            bunpu_sum[i]=0;
-            bunpu_avg[i]=0;
-            bunpu_bunbo[i]=0;
-            bunpu_nowMax[i]=0;
-            bunpu_nowMin[i]=NODE_NUM;
-            bunpu_temp_count[i]=0;
-            bunpu_mode[i]=0;
-            for(int ii=0;ii<BUF;ii++){
-                bunpu_temp[i][ii]=0;
-            }
-            for (int j = 0; j <= bunpuMax[i]; j++) {
-                if (bunpu[i][j] != 0) {
-                    bunpu_sum[i] = bunpu_sum[i] + bunpu[i][j] * j;
-                    bunpu_bunbo[i] = bunpu_bunbo[i] + bunpu[i][j];
-                    //最小値
-                    if(j<bunpu_nowMin[i]){
-                        bunpu_nowMin[i] = j;
-                    }
-                    //最大値
-                    if(j > bunpu_nowMax[i]){
-                        bunpu_nowMax[i] = j;
-                    }
-                    //median用に０を排除したリストを作成
-                    for(int k=0;k<bunpu[i][j];k++) {
-                        bunpu_temp[i][bunpu_temp_count[i]] = j;
-                        bunpu_temp_count[i]++;
-                    }
-                    //mode
-                    if(bunpu_mode[i] < j){
-                        bunpu_mode[i] = j;
-                    }
-                }
-            }
-            //average
-            if(bunpu_bunbo[i]!=0){
-                bunpu_avg[i]= (float)bunpu_sum[i]/(float)bunpu_bunbo[i];
-            }
-            //median算出
-            if(bunpu_bunbo[i]%2==1){//奇数の時
-                bunpu_median[i]=bunpu_temp[i][bunpu_bunbo[i]/2];
-            }
-            else{//偶数の時
-                if(bunpu_bunbo[i]==0){
-                    bunpu_median[i]=0;
-                }
-                else {
-                    // bunpu_median[i] = (float)((float)bunpu_temp[i][bunpu_bunbo[i]/2] + (float)bunpu_temp[i][(bunpu_bunbo[i] / 2) + 1])/2;
-                    bunpu_median[i] = (float)((float)bunpu_temp[i][bunpu_temp_count[i]/2] + (float)bunpu_temp[i][(bunpu_temp_count[i] / 2) - 1])/2;
-
-                    //fprintf(bunpuFile,"%f %f\n",bunpu_bunbo(float)bunpu_temp[bunpu_bunbo[i]/2] , (float)bunpu_temp[(bunpu_bunbo[i] / 2) + 1]);
-                }
+                //fprintf(bunpuFile,"%f %f\n",bunpu_bunbo(float)bunpu_temp[bunpu_bunbo[i]/2] , (float)bunpu_temp[(bunpu_bunbo[i] / 2) + 1]);
             }
         }
+    }
 
-     if(Scheduler::instance().clock() >=START_TIME && Scheduler::instance().clock() <=END_TIME) {
+    if(Scheduler::instance().clock() >=START_TIME && Scheduler::instance().clock() <=END_TIME) {
         //ファイル出力
         static float nexttime = START_TIME;
         if(Scheduler::instance().clock() > nexttime) {
@@ -1196,7 +1203,12 @@ void SBAgent::recv(Packet *p,Handler *h) {
                 break;
         }
     }
-
+    if(judge_res==0){
+        jc0++;
+    }
+    else{
+        jc1++;
+    }
     //前回までの
     /* if(hendou<=HENDOU){
          fprintf(fp,"s\n");
@@ -1421,10 +1433,8 @@ void SBAgent::recv(Packet *p,Handler *h) {
         } else if (neighbor_count < NEIGHBOR_TH) {//隣接ノード数が足りない場合強制フラッディング
             mystatus[my_addr()] = STA_FL;
         } else {
-
             if (goukei_topo <= SWITCH_TH) {
                 mystatus[my_addr()] = STA_FL;
-
             } else if (goukei_topo >= SWITCH_TH) {
                 mystatus[my_addr()] = STA_CODEWAIT;
 
@@ -1491,22 +1501,27 @@ void SBAgent::recv(Packet *p,Handler *h) {
         //隣接ノードの判定総合結果による自分のステータス決定
         if(mystatus[my_addr()]==STA_CODEWAIT){
             mystatus[my_addr()]=STA_CODEWAIT;
+            waitc++;
         }
         else if(mystatus[my_addr()]==STA_CODESENDREADY){
             mystatus[my_addr()]=STA_CODESENDREADY;
+            stbc++;
         }
-        //else if(neighbor_count<NEIGHBOR_TH){//下流隣接ノード数が足りない場合強制フラッディング
+            //else if(neighbor_count<NEIGHBOR_TH){//下流隣接ノード数が足りない場合強制フラッディング
         else if(downstreamNodeListCount<NEIGHBOR_TH){
             mystatus[my_addr()]=STA_FL;
+            neic++;
             //fprintf(mytraceFile,"force floding\n");
         }
         else {
             if(judge_res==0){
                 mystatus[my_addr()]=STA_FL;
+                flc++;
             }
             else if(judge_res==1){
                 //if(rand()%2==0)
                 mystatus[my_addr()]=STA_CODEWAIT;
+                ncc++;
                 //下流ノードが少ない場合は強制フラッディング
                 if(downstreamNodeListCount<=1){
                     // mystatus[my_addr()]==STA_FL;
@@ -2320,65 +2335,26 @@ fprintf(recvhistoryFile,"\n");
 
     }
     else if(ph->pkttype_==PKT_CODED){
-        if(flag == 1){//符号パケットを受信して復号に成功した場合
-            if(CODE_NUM == 2){
-                //fprintf(mytraceFile, "fc\t%f\tnode:%d\tfrom:%d\ttype:C\tpktNo:%d\tcv:%d\n", Scheduler::instance().clock(), my_addr(),ph->addr(),ph->pktnum_,ph->codevc_);
-                //mytraceprint
-                /*fprintf(mytraceFile,"fc\t");
-                 fprintf(mytraceFile,"%f\t",Scheduler::instance().clock());
-                 fprintf(mytraceFile,"%d\t",my_addr());
-                 fprintf(mytraceFile,"%d\t",ph->addr());
-                 fprintf(mytraceFile,"%d\t",ph->pkttype_);
-                 fprintf(mytraceFile,"%d\t",ph->pktnum_);
-                 fprintf(mytraceFile,"%d\t",ph->hop_count_);
-                 fprintf(mytraceFile,"%d\t",ph->codevc_);
-                 fprintf(mytraceFile,"%d\t",ph->encode_count_);
-                 //fprintf(mytraceFile,"%f\t",goukei_topo);
-                 //fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
-                 //fprintf(mytraceFile,"%d\t",neighbor_count);
-                 //fprintf(mytraceFile,"%d\t",fl_count);
-                 //fprintf(mytraceFile,"%d\t",nc_count);
-                 fprintf(mytraceFile,"\t\t\t\t\t\t\t");
-                 fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
-                 fprintf(mytraceFile,"\n");
-                 ph->addr() = my_addr();
-                 ph->hop_count_++;
-
-                 ph->pkttype_ = PKT_CODED;
-                 ch->next_hop() = IP_BROADCAST;
-                 ch->addr_type() = NS_AF_NONE;
-                 ch->direction() = hdr_cmn::DOWN;
-
-                 send(p,0);
-                 return;*/
+        //fprintf(stdout,"rcv:code status:%d\n",mystatus[my_addr()]);
+        if(mystatus[my_addr()] == STA_FL){
+            if(forwardNormalLog[my_addr()][ph->pkt1_]!=1) {
+                createNormalpacket(ph->pkt1_, 0);
+                forwardNormalLog[my_addr()][ph->pkt1_]=1;
             }
+            if(forwardNormalLog[my_addr()][ph->pkt2_]!=1) {
+                createNormalpacket(ph->pkt2_, 0);
+                forwardNormalLog[my_addr()][ph->pkt2_]=1;
 
+            }
+            return;
+        }
+        else if(mystatus[my_addr()] == STA_CODEWAIT){
 
+        }
+        else if(mystatus[my_addr()] == STA_CODESENDREADY){
 
-            /* if (CODE_NUM == 2) {
-                 createCodepacket2(collectlist[my_addr()][0], collectlist[my_addr()][1]);
-
-             } else if (CODE_NUM == 3) {
-                 createCodepacket3(collectlist[my_addr()][0], collectlist[my_addr()][1], collectlist[my_addr()][2]);
-                 mystatus[my_addr()] = STA_FL;
-                 collectNum[my_addr()] = 0;
-             } else if (CODE_NUM == 4) {
-                 createCodepacket4(collectlist[my_addr()][0], collectlist[my_addr()][1], collectlist[my_addr()][2],
-                                   collectlist[my_addr()][3]);
-                 mystatus[my_addr()] = STA_FL;
-                 collectNum[my_addr()] = 0;
-             } else if (CODE_NUM == 5) {
-                 createCodepacket5(collectlist[my_addr()][0], collectlist[my_addr()][1], collectlist[my_addr()][2],
-                                   collectlist[my_addr()][3], collectlist[my_addr()][4]);
-                 mystatus[my_addr()] = STA_FL;
-                 collectNum[my_addr()] = 0;
-             }*/
-            //fprintf(mytraceFile,"%d < %d\n",ph->encode_count_,CODE_NUM);
-
-
-            //TODOfast:if(mystatus[my_addr()]==STA_CODESENDREADY){
-            //過去に符号化した組み合わせかを確認
-            //符号化していた場合codesendflag=1
+        }
+        if(flag == 1){//符号パケットを受信して復号に成功した場合
             int codesendeflag=0;
             if(CODE_NUM == 2) {
                 for (int i = 0; i < sendcodecount[my_addr()]; i++) {
@@ -2417,7 +2393,7 @@ fprintf(recvhistoryFile,"\n");
             if(CODE_NUM == 2){
                 if(forwardNormalLog[my_addr()][ph->pkt1_]==1 || forwardNormalLog[my_addr()][ph->pkt2_]==1){
                     codesendeflag=1;
-                    fprintf(stdout,"通常パケットと重複\n");
+                    //fprintf(stdout,"通常パケットと重複\n");
                 }
             }
             //一度も符号化したことのない組み合わせなので符号化
@@ -2449,7 +2425,7 @@ fprintf(recvhistoryFile,"\n");
 
 
             }
-            //過去に符号化を行った組み合わせなので中継する
+                //過去に符号化を行った組み合わせなので中継する
                 //ここで中継すると無限ループ
             else{
                 //forwardCodePacket(p);
@@ -2511,6 +2487,10 @@ fprintf(recvhistoryFile,"\n");
             return;*/
     }
     else if(ph->pkttype_==PKT_NORMAL) {
+        if(forwardNormalLog[my_addr()][ph->pkt1_]==1) {
+            return;
+        }
+        //fprintf(stdout,"rcv:normal status:%d\n",mystatus[my_addr()]);
         //TODO:flagによる判定が必要か？
         //自分の状態により動作変更
         if(mystatus[my_addr()] == STA_FL){
@@ -2631,25 +2611,74 @@ fprintf(recvhistoryFile,"\n");
                     }
                 }
                 //TODO:ここにいちどふごうかしたくみあわせかどうかをかくにんすしょりをいれる
+                //過去に符号化した組み合わせかを確認
+                //符号化していた場合codesendflag=1
+                int codesendeflag=0;
+                if(CODE_NUM == 2) {
+                    for (int i = 0; i < sendcodecount[my_addr()]; i++) {
+                        if (sendcodelog[my_addr()][i].pkt1 == collectlist[my_addr()][0] && sendcodelog[my_addr()][i].pkt2 == collectlist[my_addr()][1] ){//&& ph->encode_count_>1){
+                            codesendeflag=1;
+                            fprintf(stdout,"codeパケットと重複2\n");
 
-                if (CODE_NUM == 2) {
-                    createCodepacket2(collectlist[my_addr()][0], collectlist[my_addr()][1],0);
-                    mystatus[my_addr()] = STA_FL;
-                    collectNum[my_addr()] = 0;
-                } else if (CODE_NUM == 3) {
-                    createCodepacket3(collectlist[my_addr()][0], collectlist[my_addr()][1], collectlist[my_addr()][2],0);
-                    mystatus[my_addr()] = STA_FL;
-                    collectNum[my_addr()] = 0;
-                } else if (CODE_NUM == 4) {
-                    createCodepacket4(collectlist[my_addr()][0], collectlist[my_addr()][1], collectlist[my_addr()][2],
-                                      collectlist[my_addr()][3],0);
-                    mystatus[my_addr()] = STA_FL;
-                    collectNum[my_addr()] = 0;
-                } else if (CODE_NUM == 5) {
-                    createCodepacket5(collectlist[my_addr()][0], collectlist[my_addr()][1], collectlist[my_addr()][2],
-                                      collectlist[my_addr()][3], collectlist[my_addr()][4],0);
-                    mystatus[my_addr()] = STA_FL;
-                    collectNum[my_addr()] = 0;
+                        }
+                    }
+                }
+                else if(CODE_NUM == 3){ //TODO:code3
+                    for (int i = 0; i < sendcodecount[my_addr()]; i++) {
+                        if (sendcodelog[my_addr()][i].pkt1 == ph->pkt1_ && sendcodelog[my_addr()][i].pkt2 == ph->pkt2_ && sendcodelog[my_addr()][i].pkt3 == ph->pkt3_){
+                            codesendeflag=1;
+
+                        }
+                    }
+                }
+                else if(CODE_NUM == 4){ //TODO:code3
+                    for (int i = 0; i < sendcodecount[my_addr()]; i++) {
+                        if (sendcodelog[my_addr()][i].pkt1 == ph->pkt1_ && sendcodelog[my_addr()][i].pkt2 == ph->pkt2_ && sendcodelog[my_addr()][i].pkt3 == ph->pkt3_ && sendcodelog[my_addr()][i].pkt4 == ph->pkt4_){
+                            codesendeflag=1;
+
+                        }
+                    }
+                }
+                else if(CODE_NUM == 5){ //TODO:code3
+                    for (int i = 0; i < sendcodecount[my_addr()]; i++) {
+                        if (sendcodelog[my_addr()][i].pkt1 == ph->pkt1_ && sendcodelog[my_addr()][i].pkt2 == ph->pkt2_ && sendcodelog[my_addr()][i].pkt3 == ph->pkt3_ && sendcodelog[my_addr()][i].pkt4 == ph->pkt4_ && sendcodelog[my_addr()][i].pkt5 == ph->pkt5_){
+                            codesendeflag=1;
+                        }
+                    }
+                }
+
+                //過去に通常パケットで送信していた場合符号化を中止
+                //codesendflag=1
+                if(CODE_NUM == 2){
+                    if(forwardNormalLog[my_addr()][collectlist[my_addr()][0]]==1 || forwardNormalLog[my_addr()][collectlist[my_addr()][1]]==1){
+                        codesendeflag=1;
+                        fprintf(stdout,"通常パケットと重複2\n");
+                    }
+                }
+                //符号化して送信
+                if(codesendeflag==0) {
+                    if (CODE_NUM == 2) {
+                        createCodepacket2(collectlist[my_addr()][0], collectlist[my_addr()][1], 0);
+                        mystatus[my_addr()] = STA_FL;
+                        collectNum[my_addr()] = 0;
+                    } else if (CODE_NUM == 3) {
+                        createCodepacket3(collectlist[my_addr()][0], collectlist[my_addr()][1],
+                                          collectlist[my_addr()][2], 0);
+                        mystatus[my_addr()] = STA_FL;
+                        collectNum[my_addr()] = 0;
+                    } else if (CODE_NUM == 4) {
+                        createCodepacket4(collectlist[my_addr()][0], collectlist[my_addr()][1],
+                                          collectlist[my_addr()][2],
+                                          collectlist[my_addr()][3], 0);
+                        mystatus[my_addr()] = STA_FL;
+                        collectNum[my_addr()] = 0;
+                    } else if (CODE_NUM == 5) {
+                        createCodepacket5(collectlist[my_addr()][0], collectlist[my_addr()][1],
+                                          collectlist[my_addr()][2],
+                                          collectlist[my_addr()][3], collectlist[my_addr()][4], 0);
+                        mystatus[my_addr()] = STA_FL;
+                        collectNum[my_addr()] = 0;
+                    }
                 }
             }
         }
@@ -3204,7 +3233,8 @@ void SBAgent::printRes(){
             nodecount++;
         }
 
-        fprintf(resFile,"%f\n",sum_drate/(float)nodecount);
+        fprintf(resFile,"%f",sum_drate/(float)nodecount);
+        fprintf(resFile," %d %d/ wait:%d stb:%d nei:%d fl:%d nc:%d\n",jc0,jc1,waitc,stbc,neic,flc,ncc);
         fflush(resFile);
 
         done = true;
@@ -3307,4 +3337,69 @@ int SBAgent::forwardCodePacket(Packet * bp) {
     sendcodelog[my_addr()][sendcodecount[my_addr()]].pktnumb=ph->pktnum_;
     sendcodecount[my_addr()]++;
     codepktnum++;*/
+}
+
+int SBAgent::createNormalpacket(int mod_pktnum, int temp) {
+    Packet* p = allocpkt();
+    struct hdr_cmn* ch = HDR_CMN(p);
+    struct hdr_ip* ih = HDR_IP(p);
+    struct hdr_beacon * ph = HDR_BEACON(p);
+
+    ph->addr() = my_addr();
+    ph->seq_num() = seq_num_++;
+    ph->pktnum_=mod_pktnum;
+    ph->pkttype_=PKT_NORMAL;
+    ch->ptype() = PT_SB;
+    ph->codenum_=-1;
+    ph->codevc_=rand()%GALOIS+1;
+    ph->pkt1_=-1;
+    ph->pkt2_=-1;
+    ph->pkt3_=-1;
+    ph->pkt4_=-1;
+    ph->pkt5_=-1;
+    ph->hop_count_=1;
+    ph->encode_count_=0;
+    ph->hopHistCount_=0;
+    ph->hopHist_[ph->hopHistCount_]=my_addr();
+
+
+    ch->direction() = hdr_cmn::DOWN;
+    ch->size() = IP_HDR_LEN;
+    ch->error() = 0;
+    ch->next_hop() = IP_BROADCAST;
+    ch->addr_type() = NS_AF_INET;
+
+    ih->saddr() = my_addr();
+    ih->daddr() = IP_BROADCAST;
+    ih->sport() = RT_PORT;
+    ih->dport() = RT_PORT;
+    ih->ttl() = IP_DEF_TTL;
+
+    //mytraceprint
+    fprintf(mytraceFile,"cn\t");
+    fprintf(mytraceFile,"%f\t",Scheduler::instance().clock());
+    fprintf(mytraceFile,"%d\t",my_addr());
+    fprintf(mytraceFile,"%d\t",ph->addr());
+    fprintf(mytraceFile,"%d\t",ph->pkttype_);
+    fprintf(mytraceFile,"%d\t",ph->pktnum_);
+    fprintf(mytraceFile,"%d\t",ph->hop_count_);
+    fprintf(mytraceFile,"%d\t",ph->hoplimit_);
+    fprintf(mytraceFile,"%d\t",ph->codevc_);
+    fprintf(mytraceFile,"%d\t",ph->encode_count_);
+    //fprintf(mytraceFile,"%f\t",goukei_topo);
+    //fprintf(mytraceFile,"%d\t",mystatus[my_addr()]);
+    //fprintf(mytraceFile,"%d\t",neighbor_count);
+    //fprintf(mytraceFile,"%d\t",fl_count);
+    //fprintf(mytraceFile,"%d\t",nc_count);
+    fprintf(mytraceFile,"\t\t\t\t\t\t");
+    fprintf(mytraceFile,"[%d %d %d %d %d]\t",ph->pkt1_,ph->pkt2_,ph->pkt3_,ph->pkt4_,ph->pkt5_);
+    fprintf(mytraceFile,"\n");
+    //即時送信
+    //send(p,0);
+    if(Scheduler::instance().clock()>START_TIME && Scheduler::instance().clock()<=END_TIME) {
+        send_packet_count++;
+        send_c_packet_count++;
+    }
+    //遅延送信
+    Scheduler::instance().schedule(target_,p,0.01 * Random::uniform());
 }

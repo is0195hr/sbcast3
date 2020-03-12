@@ -14,6 +14,7 @@
 
 
 
+
 #define CURRENT_TIME Schedular::instance().clock()
 #define HDR_BEACON(p) (hdr_beacon *) hdr_beacon::access(p)
 
@@ -82,6 +83,7 @@ public:
     int createReplypacket(int,int,int);
     int getArrayFirstEntry(int[],int);
     int getArrayNum(int[], int, int);
+    int createNormalpacket(int, int);
 
     int forwardCodePacket(Packet *);
 
